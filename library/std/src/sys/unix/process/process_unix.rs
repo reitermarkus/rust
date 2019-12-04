@@ -17,12 +17,22 @@ use libc::{c_int, gid_t, pid_t, uid_t};
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Command {
+    #[cfg(target_os = "freertos")]
     pub fn spawn(
         &mut self,
         default: Stdio,
         needs_stdin: bool,
     ) -> io::Result<(Process, StdioPipes)> {
-        const CLOEXEC_MSG_FOOTER: [u8; 4] = *b"NOEX";
+        crate::sys::unsupported()
+    }
+
+    #[cfg(not(target_os = "freertos"))]
+    pub fn spawn(
+        &mut self,
+        default: Stdio,
+        needs_stdin: bool,
+    ) -> io::Result<(Process, StdioPipes)> {
+        const CLOEXEC_MSG_FOOTER: &[u8] = b"NOEX";
 
         let envp = self.capture_env();
 
@@ -164,6 +174,16 @@ impl Command {
     // allocation). Instead we just close it manually. This will never
     // have the drop glue anyway because this code never returns (the
     // child will either exec() or invoke libc::exit)
+    #[cfg(target_os = "freertos")]
+    unsafe fn do_exec(
+        &mut self,
+        stdio: ChildPipes,
+        maybe_envp: Option<&CStringArray>
+    ) -> Result<!, io::Error> {
+        crate::sys::unsupported()
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     unsafe fn do_exec(
         &mut self,
         stdio: ChildPipes,

@@ -10,14 +10,16 @@ pub fn target() -> Target {
         options: TargetOptions {
             endian: "little".to_string(),
             c_int_width: "32".to_string(),
-            os: "none".to_string(),
-            env: String::new(),
-            vendor: String::new(),
+            os: "freertos".to_string(),
+            target_family: Some("unix".to_string()),
+            env: "newlib".to_string(),
+            vendor: "espressif".to_string(),
             linker_flavor: LinkerFlavor::Gcc,
 
             executables: true,
             cpu: "esp32".to_string(),
             linker: Some("xtensa-esp32-elf-gcc".to_string()),
+            linker_is_gnu: true,
 
             max_atomic_width: Some(32),
 
