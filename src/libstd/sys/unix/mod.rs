@@ -13,6 +13,8 @@ pub use crate::os::dragonfly as platform;
 pub use crate::os::emscripten as platform;
 #[cfg(all(not(doc), target_os = "freebsd"))]
 pub use crate::os::freebsd as platform;
+#[cfg(all(not(doc), target_os = "freertos"))]
+pub use crate::os::freertos as platform;
 #[cfg(all(not(doc), target_os = "fuchsia"))]
 pub use crate::os::fuchsia as platform;
 #[cfg(all(not(doc), target_os = "haiku"))]

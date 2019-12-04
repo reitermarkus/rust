@@ -70,7 +70,12 @@ impl Socket {
 
             let fd = cvt(libc::socket(fam, ty, 0))?;
             let fd = FileDesc::new(fd);
+
+            // Setting CLOEXEC is not supported on FreeRTOS since
+            // there is no file system.
+            #[cfg(not(target_os = "freertos"))]
             fd.set_cloexec()?;
+
             let socket = Socket(fd);
 
             // macOS and iOS use `SO_NOSIGPIPE` as a `setsockopt`
@@ -101,8 +106,15 @@ impl Socket {
             cvt(libc::socketpair(fam, ty, 0, fds.as_mut_ptr()))?;
             let a = FileDesc::new(fds[0]);
             let b = FileDesc::new(fds[1]);
-            a.set_cloexec()?;
-            b.set_cloexec()?;
+
+            // Setting CLOEXEC is not supported on FreeRTOS since
+            // there is no file system.
+            #[cfg(not(target_os = "freertos"))]
+            {
+                a.set_cloexec()?;
+                b.set_cloexec()?;
+            }
+
             Ok((Socket(a), Socket(b)))
         }
     }
@@ -199,7 +211,12 @@ impl Socket {
 
         let fd = cvt_r(|| unsafe { libc::accept(self.0.raw(), storage, len) })?;
         let fd = FileDesc::new(fd);
+
+        // Setting CLOEXEC is not supported on FreeRTOS since
+        // there is no file system.
+        #[cfg(not(target_os = "freertos"))]
         fd.set_cloexec()?;
+
         Ok(Socket(fd))
     }
 
@@ -335,7 +352,22 @@ impl Socket {
     #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         let mut nonblocking = nonblocking as libc::c_int;
-        cvt(unsafe { libc::ioctl(*self.as_inner(), libc::FIONBIO, &mut nonblocking) }).map(drop)
+        cvt(unsafe {
+            #[cfg(not(target_os = "freertos"))]
+            {
+                libc::ioctl(*self.as_inner(), libc::FIONBIO, &mut nonblocking)
+            }
+
+            #[cfg(target_os = "freertos")]
+            {
+                extern "C" {
+                    fn lwip_ioctl(fd: libc::c_int, request: libc::c_long, ...) -> libc::c_int;
+                }
+
+                lwip_ioctl(*self.as_inner(), libc::FIONBIO as libc::c_long, &mut nonblocking)
+            }
+        })
+        .map(drop)
     }
 
     #[cfg(any(target_os = "solaris", target_os = "illumos"))]
