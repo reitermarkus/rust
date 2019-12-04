@@ -290,7 +290,31 @@ impl FileAttr {
     }
 }
 
-#[cfg(not(target_os = "netbsd"))]
+#[cfg(target_env = "newlib")]
+impl FileAttr {
+    pub fn modified(&self) -> io::Result<SystemTime> {
+        Ok(SystemTime::from(libc::timespec {
+            tv_sec: self.stat.st_mtime as libc::time_t,
+            tv_nsec: 0,
+        }))
+    }
+
+    pub fn accessed(&self) -> io::Result<SystemTime> {
+        Ok(SystemTime::from(libc::timespec {
+            tv_sec: self.stat.st_atime as libc::time_t,
+            tv_nsec: 0,
+        }))
+    }
+
+    pub fn created(&self) -> io::Result<SystemTime> {
+        Ok(SystemTime::from(libc::timespec {
+            tv_sec: self.stat.st_ctime as libc::time_t,
+            tv_nsec: 0,
+        }))
+    }
+}
+
+#[cfg(not(any(target_os = "netbsd", target_env = "newlib")))]
 impl FileAttr {
     pub fn modified(&self) -> io::Result<SystemTime> {
         Ok(SystemTime::from(libc::timespec {
@@ -554,6 +578,7 @@ impl DirEntry {
         target_os = "ios",
         target_os = "linux",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "android",
         target_os = "solaris",
         target_os = "illumos",
@@ -597,6 +622,7 @@ impl DirEntry {
         target_os = "android",
         target_os = "linux",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "l4re",
         target_os = "haiku"
     ))]

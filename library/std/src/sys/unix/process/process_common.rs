@@ -19,7 +19,7 @@ use crate::sys::fs::OpenOptions;
 use libc::{c_char, c_int, gid_t, uid_t, EXIT_FAILURE, EXIT_SUCCESS};
 
 cfg_if::cfg_if! {
-    if #[cfg(target_os = "fuchsia")] {
+    if #[cfg(any(target_os = "freertos", target_os = "fuchsia"))] {
         // fuchsia doesn't have /dev/null
     } else if #[cfg(target_os = "redox")] {
         const DEV_NULL: &str = "null:\0";
@@ -120,7 +120,7 @@ pub enum ChildStdio {
 
     // On Fuchsia, null stdio is the default, so we simply don't specify
     // any actions at the time of spawning.
-    #[cfg(target_os = "fuchsia")]
+    #[cfg(any(target_os = "freertos", target_os = "fuchsia"))]
     Null,
 }
 
@@ -335,7 +335,7 @@ impl Stdio {
                 Ok((ChildStdio::Owned(theirs.into_fd()), Some(ours)))
             }
 
-            #[cfg(not(target_os = "fuchsia"))]
+            #[cfg(not(any(target_os = "freertos", target_os = "fuchsia")))]
             Stdio::Null => {
                 let mut opts = OpenOptions::new();
                 opts.read(readable);
@@ -345,7 +345,7 @@ impl Stdio {
                 Ok((ChildStdio::Owned(fd.into_fd()), None))
             }
 
-            #[cfg(target_os = "fuchsia")]
+            #[cfg(any(target_os = "freertos", target_os = "fuchsia"))]
             Stdio::Null => Ok((ChildStdio::Null, None)),
         }
     }
@@ -370,7 +370,7 @@ impl ChildStdio {
             ChildStdio::Explicit(fd) => Some(fd),
             ChildStdio::Owned(ref fd) => Some(fd.raw()),
 
-            #[cfg(target_os = "fuchsia")]
+            #[cfg(any(target_os = "freertos", target_os = "fuchsia"))]
             ChildStdio::Null => None,
         }
     }

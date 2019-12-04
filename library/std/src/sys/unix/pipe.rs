@@ -1,7 +1,7 @@
 use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::sys::fd::FileDesc;
-use crate::sys::{cvt, cvt_r};
+use crate::sys::cvt_r;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Anonymous pipes
@@ -9,7 +9,14 @@ use crate::sys::{cvt, cvt_r};
 
 pub struct AnonPipe(FileDesc);
 
+#[cfg(target_os = "freertos")]
 pub fn anon_pipe() -> io::Result<(AnonPipe, AnonPipe)> {
+    crate::sys::unsupported()
+}
+
+#[cfg(not(target_os = "freertos"))]
+pub fn anon_pipe() -> io::Result<(AnonPipe, AnonPipe)> {
+    use crate::sys::cvt;
     let mut fds = [0; 2];
 
     // The only known way right now to create atomically set the CLOEXEC flag is

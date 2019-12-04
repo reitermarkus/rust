@@ -1,24 +1,73 @@
 use crate::cmp;
-use crate::ffi::CStr;
 use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::net::{Shutdown, SocketAddr};
-use crate::str;
-use crate::sys::fd::FileDesc;
+use crate::sys::net_fd::NetFileDesc;
 use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 use crate::time::{Duration, Instant};
 
-use libc::{c_int, c_void, size_t, sockaddr, socklen_t, EAI_SYSTEM, MSG_PEEK};
+use libc::{c_int, c_void, size_t, sockaddr, socklen_t, MSG_PEEK};
 
 pub use crate::sys::{cvt, cvt_r};
 
-#[allow(unused_extern_crates)]
-pub extern crate libc as netc;
+pub mod netc {
+    pub use libc::*;
+
+    #[cfg(target_os = "freertos")]
+    extern "C" {
+        #[link_name = "lwip_fcntl"]
+        pub fn fcntl(s: c_int, cmd: c_int, val: c_int) -> c_int;
+        #[link_name = "lwip_close"]
+        pub fn close(s: c_int) -> ssize_t;
+        #[link_name = "lwip_read"]
+        pub fn read(s: c_int, mem: *mut c_void, len: size_t) -> ssize_t;
+        #[link_name = "lwip_readv"]
+        pub fn readv(s: c_int, iov: *const iovec, iovcnt: c_int) -> ssize_t;
+        #[link_name = "lwip_write"]
+        pub fn write(s: c_int, dataptr: *const c_void, len: size_t) -> ssize_t;
+        #[link_name = "lwip_writev"]
+        pub fn writev(s: c_int, iov: *const iovec, iovcnt: c_int) -> ssize_t;
+        #[link_name = "lwip_accept"]
+        pub fn accept(s: c_int, addr: *mut sockaddr, addrlen: *mut socklen_t) -> c_int;
+        #[link_name = "lwip_bind"]
+        pub fn bind(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
+        #[link_name = "lwip_connect"]
+        pub fn connect(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
+        #[link_name = "lwip_ioctl"]
+        pub fn ioctl(fd: c_int, request: c_ulong, ...) -> c_int;
+        #[link_name = "lwip_getaddrinfo"]
+        pub fn getaddrinfo(nodename: *const c_char, servname: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> c_int;
+        #[link_name = "lwip_freeaddrinfo"]
+        pub fn freeaddrinfo(ai: *mut addrinfo);
+        #[link_name = "lwip_getsockname"]
+        pub fn getsockname(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
+        #[link_name = "lwip_getpeername"]
+        pub fn getpeername(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
+        #[link_name = "lwip_listen"]
+        pub fn listen(s: c_int, backlog: c_int) -> c_int;
+        #[link_name = "lwip_send"]
+        pub fn send(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int) -> ssize_t;
+        #[link_name = "lwip_sendto"]
+        pub fn sendto(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int, to: *const sockaddr, tolen: socklen_t) -> ssize_t;
+        #[link_name = "lwip_recv"]
+        pub fn recv(s: c_int, mem: *mut c_void, len: size_t, flags: c_int) -> ssize_t;
+        #[link_name = "lwip_recvfrom"]
+        pub fn recvfrom(s: c_int, mem: *mut c_void, len: size_t, flags: c_int, from: *mut sockaddr, fromlen: *mut socklen_t) -> ssize_t;
+        #[link_name = "lwip_getsockopt"]
+        pub fn getsockopt(s: c_int, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut socklen_t) -> c_int;
+        #[link_name = "lwip_setsockopt"]
+        pub fn setsockopt(s: c_int, level: c_int, optname: c_int, optval: *const c_void, optlen: socklen_t) -> c_int;
+        #[link_name = "lwip_shutdown"]
+        pub fn shutdown(s: c_int, how: c_int) -> c_int;
+        #[link_name = "lwip_socket"]
+        pub fn socket(domain: c_int, r#type: c_int, protocol: c_int) -> c_int;
+    }
+}
 
 pub type wrlen_t = size_t;
 
-pub struct Socket(FileDesc);
+pub struct Socket(NetFileDesc);
 
 pub fn init() {}
 
@@ -30,13 +79,22 @@ pub fn cvt_gai(err: c_int) -> io::Result<()> {
     // We may need to trigger a glibc workaround. See on_resolver_failure() for details.
     on_resolver_failure();
 
-    if err == EAI_SYSTEM {
-        return Err(io::Error::last_os_error());
-    }
+    #[cfg(target_os = "freertos")]
+    let detail = format!("error code {}", err);
 
-    let detail = unsafe {
-        str::from_utf8(CStr::from_ptr(libc::gai_strerror(err)).to_bytes()).unwrap().to_owned()
+    #[cfg(not(target_os = "freertos"))]
+    let detail = {
+        if err == libc::EAI_SYSTEM {
+            return Err(io::Error::last_os_error());
+        }
+
+        unsafe {
+            use crate::str;
+            use crate::ffi::CStr;
+            str::from_utf8(CStr::from_ptr(libc::gai_strerror(err)).to_bytes()).unwrap().to_owned()
+        }
     };
+
     Err(io::Error::new(
         io::ErrorKind::Other,
         &format!("failed to lookup address information: {}", detail)[..],
@@ -58,18 +116,18 @@ impl Socket {
                 if #[cfg(target_os = "linux")] {
                     // On Linux we pass the SOCK_CLOEXEC flag to atomically create
                     // the socket and set it as CLOEXEC, added in 2.6.27.
-                    let fd = cvt(libc::socket(fam, ty | libc::SOCK_CLOEXEC, 0))?;
-                    Ok(Socket(FileDesc::new(fd)))
+                    let fd = cvt(netc::socket(fam, ty | netc::SOCK_CLOEXEC, 0))?;
+                    Ok(Socket(NetFileDesc::new(fd)))
                 } else {
-                    let fd = cvt(libc::socket(fam, ty, 0))?;
-                    let fd = FileDesc::new(fd);
+                    let fd = cvt(netc::socket(fam, ty, 0))?;
+                    let fd = NetFileDesc::new(fd);
                     fd.set_cloexec()?;
                     let socket = Socket(fd);
 
                     // macOS and iOS use `SO_NOSIGPIPE` as a `setsockopt`
                     // flag to disable `SIGPIPE` emission on socket.
                     #[cfg(target_vendor = "apple")]
-                    setsockopt(&socket, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1)?;
+                    setsockopt(&socket, netc::SOL_SOCKET, netc::SO_NOSIGPIPE, 1)?;
 
                     Ok(socket)
                 }
@@ -77,6 +135,12 @@ impl Socket {
         }
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn new_pair(_fam: c_int, _ty: c_int) -> io::Result<(Socket, Socket)> {
+        crate::sys::unsupported()
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
         unsafe {
             let mut fds = [0, 0];
@@ -85,11 +149,11 @@ impl Socket {
                 if #[cfg(target_os = "linux")] {
                     // Like above, set cloexec atomically
                     cvt(libc::socketpair(fam, ty | libc::SOCK_CLOEXEC, 0, fds.as_mut_ptr()))?;
-                    Ok((Socket(FileDesc::new(fds[0])), Socket(FileDesc::new(fds[1]))))
+                    Ok((Socket(NetFileDesc::new(fds[0])), Socket(NetFileDesc::new(fds[1]))))
                 } else {
                     cvt(libc::socketpair(fam, ty, 0, fds.as_mut_ptr()))?;
-                    let a = FileDesc::new(fds[0]);
-                    let b = FileDesc::new(fds[1]);
+                    let a = NetFileDesc::new(fds[0]);
+                    let b = NetFileDesc::new(fds[1]);
                     a.set_cloexec()?;
                     b.set_cloexec()?;
                     Ok((Socket(a), Socket(b)))
@@ -102,7 +166,7 @@ impl Socket {
         self.set_nonblocking(true)?;
         let r = unsafe {
             let (addrp, len) = addr.into_inner();
-            cvt(libc::connect(self.0.raw(), addrp, len))
+            cvt(netc::connect(self.0.raw(), addrp, len))
         };
         self.set_nonblocking(false)?;
 
@@ -172,12 +236,12 @@ impl Socket {
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
                 let fd = cvt_r(|| unsafe {
-                    libc::accept4(self.0.raw(), storage, len, libc::SOCK_CLOEXEC)
+                    netc::accept4(self.0.raw(), storage, len, netc::SOCK_CLOEXEC)
                 })?;
-                Ok(Socket(FileDesc::new(fd)))
+                Ok(Socket(NetFileDesc::new(fd)))
             } else {
-                let fd = cvt_r(|| unsafe { libc::accept(self.0.raw(), storage, len) })?;
-                let fd = FileDesc::new(fd);
+                let fd = cvt_r(|| unsafe { netc::accept(self.0.raw(), storage, len) })?;
+                let fd = NetFileDesc::new(fd);
                 fd.set_cloexec()?;
                 Ok(Socket(fd))
             }
@@ -190,7 +254,7 @@ impl Socket {
 
     fn recv_with_flags(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            libc::recv(self.0.raw(), buf.as_mut_ptr() as *mut c_void, buf.len(), flags)
+            netc::recv(self.0.raw(), buf.as_mut_ptr() as *mut c_void, buf.len(), flags)
         })?;
         Ok(ret as usize)
     }
@@ -221,7 +285,7 @@ impl Socket {
         let mut addrlen = mem::size_of_val(&storage) as libc::socklen_t;
 
         let n = cvt(unsafe {
-            libc::recvfrom(
+            netc::recvfrom(
                 self.0.raw(),
                 buf.as_mut_ptr() as *mut c_void,
                 buf.len(),
@@ -300,7 +364,7 @@ impl Socket {
             Shutdown::Read => libc::SHUT_RD,
             Shutdown::Both => libc::SHUT_RDWR,
         };
-        cvt(unsafe { libc::shutdown(self.0.raw(), how) })?;
+        cvt(unsafe { netc::shutdown(self.0.raw(), how) })?;
         Ok(())
     }
 
@@ -316,13 +380,13 @@ impl Socket {
     #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         let mut nonblocking = nonblocking as libc::c_int;
-        cvt(unsafe { libc::ioctl(*self.as_inner(), libc::FIONBIO, &mut nonblocking) }).map(drop)
+        cvt(unsafe { netc::ioctl(*self.as_inner(), netc::FIONBIO, &mut nonblocking) }).map(drop)
     }
 
     #[cfg(any(target_os = "solaris", target_os = "illumos"))]
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         // FIONBIO is inadequate for sockets on illumos/Solaris, so use the
-        // fcntl(F_[GS]ETFL)-based method provided by FileDesc instead.
+        // fcntl(F_[GS]ETFL)-based method provided by NetFileDesc instead.
         self.0.set_nonblocking(nonblocking)
     }
 
@@ -340,7 +404,7 @@ impl AsInner<c_int> for Socket {
 
 impl FromInner<c_int> for Socket {
     fn from_inner(fd: c_int) -> Socket {
-        Socket(FileDesc::new(fd))
+        Socket(NetFileDesc::new(fd))
     }
 }
 
