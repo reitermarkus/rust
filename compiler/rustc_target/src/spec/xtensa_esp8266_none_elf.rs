@@ -8,15 +8,17 @@ pub fn target() -> TargetResult {
         target_c_int_width: "32".to_string(),
         data_layout: "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32".to_string(),
         arch: "xtensa".to_string(),
-        target_os: "none".to_string(),
-        target_env: String::new(),
-        target_vendor: String::new(),
+        target_os: "freertos".to_string(),
+        target_env: "newlib".to_string(),
+        target_vendor: "espressif".to_string(),
         linker_flavor: LinkerFlavor::Gcc,
 
         options: TargetOptions {
             executables: true,
+            target_family: Some("unix".to_string()),
             cpu: "esp8266".to_string(),
             linker: Some("xtensa-lx106-elf-gcc".to_string()),
+            linker_is_gnu: true,
 
             max_atomic_width: Some(32),
 

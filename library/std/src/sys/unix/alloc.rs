@@ -53,7 +53,12 @@ unsafe impl GlobalAlloc for System {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(any(
+    if #[cfg(target_os = "freertos")] {
+        #[inline]
+        unsafe fn aligned_malloc(layout: &Layout) -> *mut u8 {
+            libc::malloc(layout.size()) as *mut u8
+        }
+    } else if #[cfg(any(
         target_os = "android",
         target_os = "illumos",
         target_os = "redox",

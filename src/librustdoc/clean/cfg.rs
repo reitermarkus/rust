@@ -448,6 +448,7 @@ impl<'a> fmt::Display for Display<'a> {
                         "dragonfly" => "DragonFly BSD",
                         "emscripten" => "Emscripten",
                         "freebsd" => "FreeBSD",
+                        "freertos" => "FreeRTOS",
                         "fuchsia" => "Fuchsia",
                         "haiku" => "Haiku",
                         "hermit" => "HermitCore",

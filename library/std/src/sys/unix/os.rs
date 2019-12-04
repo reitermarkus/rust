@@ -73,7 +73,7 @@ pub fn errno() -> i32 {
 }
 
 /// Sets the platform-specific value of errno
-#[cfg(all(not(target_os = "linux"), not(target_os = "dragonfly")))] // needed for readdir and syscall!
+#[cfg(all(not(target_os = "linux"), not(target_os = "dragonfly"), not(target_os = "freertos")))] // needed for readdir and syscall!
 #[allow(dead_code)] // but not all target cfgs actually end up using it
 pub fn set_errno(e: i32) {
     unsafe { *errno_location() = e as c_int }
@@ -121,6 +121,12 @@ pub fn error_string(errno: i32) -> String {
     }
 }
 
+#[cfg(target_os = "freertos")]
+pub fn getcwd() -> io::Result<PathBuf> {
+    crate::sys::unsupported()
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn getcwd() -> io::Result<PathBuf> {
     let mut buf = Vec::with_capacity(512);
     loop {
@@ -147,6 +153,12 @@ pub fn getcwd() -> io::Result<PathBuf> {
     }
 }
 
+#[cfg(target_os = "freertos")]
+pub fn chdir(_p: &path::Path) -> io::Result<()> {
+    crate::sys::unsupported()
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn chdir(p: &path::Path) -> io::Result<()> {
     let p: &OsStr = p.as_ref();
     let p = CString::new(p.as_bytes())?;
@@ -433,7 +445,7 @@ pub fn current_exe() -> io::Result<PathBuf> {
     crate::fs::read_to_string("sys:exe").map(PathBuf::from)
 }
 
-#[cfg(any(target_os = "fuchsia", target_os = "l4re"))]
+#[cfg(any(target_os = "fuchsia", target_os = "l4re", target_os = "freertos"))]
 pub fn current_exe() -> io::Result<PathBuf> {
     use crate::io::ErrorKind;
     Err(io::Error::new(ErrorKind::Other, "Not yet implemented!"))
@@ -547,6 +559,7 @@ pub fn unsetenv(n: &OsStr) -> io::Result<()> {
     }
 }
 
+#[cfg(not(target_os = "freertos"))]
 pub fn page_size() -> usize {
     unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize }
 }
@@ -568,6 +581,7 @@ pub fn home_dir() -> Option<PathBuf> {
         target_os = "android",
         target_os = "ios",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "redox"
     ))]
     unsafe fn fallback() -> Option<OsString> {
@@ -577,6 +591,7 @@ pub fn home_dir() -> Option<PathBuf> {
         target_os = "android",
         target_os = "ios",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "redox"
     )))]
     unsafe fn fallback() -> Option<OsString> {
