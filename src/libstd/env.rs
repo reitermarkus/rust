@@ -1041,6 +1041,11 @@ mod arch {
     pub const ARCH: &'static str = "riscv64";
 }
 
+#[cfg(target_arch = "xtensa")]
+mod arch {
+    pub const ARCH: &'static str = "xtensa";
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

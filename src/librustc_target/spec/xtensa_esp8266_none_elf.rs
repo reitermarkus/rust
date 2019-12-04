@@ -10,7 +10,7 @@ pub fn target() -> TargetResult {
         arch: "xtensa".to_string(),
         target_os: "none".to_string(),
         target_env: String::new(),
-        target_vendor: String::new(),
+        target_vendor: "espressif".to_string(),
         linker_flavor: LinkerFlavor::Gcc,
 
         options: TargetOptions {

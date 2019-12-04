@@ -357,6 +357,7 @@ impl<'a> fmt::Display for Html<'a> {
                         "dragonfly" => "DragonFly BSD",
                         "emscripten" => "Emscripten",
                         "freebsd" => "FreeBSD",
+                        "freertos" => "FreeRTOS",
                         "fuchsia" => "Fuchsia",
                         "haiku" => "Haiku",
                         "hermit" => "HermitCore",
