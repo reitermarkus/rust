@@ -151,6 +151,12 @@ fn to_ipv6mr_interface(value: u32) -> libc::c_uint {
     value as libc::c_uint
 }
 
+pub fn to_in_addr(ip: &Ipv4Addr) -> libc::in_addr {
+    c::in_addr {
+        s_addr: u32::to_be(u32::from_be_bytes(ip.octets())),
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // get_host_addresses
 ////////////////////////////////////////////////////////////////////////////////
@@ -594,8 +600,8 @@ impl UdpSocket {
 
     pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let mreq = c::ip_mreq {
-            imr_multiaddr: *multiaddr.as_inner(),
-            imr_interface: *interface.as_inner(),
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_interface: to_in_addr(interface),
         };
         setsockopt(&self.inner, c::IPPROTO_IP, c::IP_ADD_MEMBERSHIP, mreq)
     }
@@ -610,8 +616,8 @@ impl UdpSocket {
 
     pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let mreq = c::ip_mreq {
-            imr_multiaddr: *multiaddr.as_inner(),
-            imr_interface: *interface.as_inner(),
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_interface: to_in_addr(interface),
         };
         setsockopt(&self.inner, c::IPPROTO_IP, c::IP_DROP_MEMBERSHIP, mreq)
     }

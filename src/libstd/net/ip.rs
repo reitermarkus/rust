@@ -77,7 +77,7 @@ pub enum IpAddr {
 #[derive(Copy)]
 #[stable(feature = "rust1", since = "1.0.0")]
 pub struct Ipv4Addr {
-    inner: c::in_addr,
+    inner: [u8; 4],
 }
 
 /// An IPv6 address.
@@ -320,18 +320,7 @@ impl Ipv4Addr {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     pub const fn new(a: u8, b: u8, c: u8, d: u8) -> Ipv4Addr {
-        // FIXME: should just be u32::from_be_bytes([a, b, c, d]),
-        // once that method is no longer rustc_const_unstable
-        Ipv4Addr {
-            inner: c::in_addr {
-                s_addr: u32::to_be(
-                    ((a as u32) << 24) |
-                    ((b as u32) << 16) |
-                    ((c as u32) <<  8) |
-                    (d as u32)
-                ),
-            }
-        }
+        Ipv4Addr { inner: [a, b, c, d] }
     }
 
     /// An IPv4 address with the address pointing to localhost: 127.0.0.1.
@@ -384,9 +373,8 @@ impl Ipv4Addr {
     /// assert_eq!(addr.octets(), [127, 0, 0, 1]);
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
-    pub fn octets(&self) -> [u8; 4] {
-        // This returns the order we want because s_addr is stored in big-endian.
-        self.inner.s_addr.to_ne_bytes()
+    pub const fn octets(&self) -> [u8; 4] {
+        self.inner
     }
 
     /// Returns [`true`] for the special 'unspecified' address (0.0.0.0).
@@ -407,7 +395,8 @@ impl Ipv4Addr {
     /// ```
     #[stable(feature = "ip_shared", since = "1.12.0")]
     pub const fn is_unspecified(&self) -> bool {
-        self.inner.s_addr == 0
+        // FIXME: change to `self.inner == [0, 0, 0, 0]` when stable as `const fn`
+        self.inner[0] | self.inner[1] | self.inner[2] | self.inner[3] == 0
     }
 
     /// Returns [`true`] if this is a loopback address (127.0.0.0/8).
@@ -427,7 +416,7 @@ impl Ipv4Addr {
     /// ```
     #[stable(since = "1.7.0", feature = "ip_17")]
     pub fn is_loopback(&self) -> bool {
-        self.octets()[0] == 127
+        self.inner[0] == 127
     }
 
     /// Returns [`true`] if this is a private address.
@@ -456,7 +445,7 @@ impl Ipv4Addr {
     /// ```
     #[stable(since = "1.7.0", feature = "ip_17")]
     pub fn is_private(&self) -> bool {
-        match self.octets() {
+        match self.inner {
             [10, ..] => true,
             [172, b, ..] if b >= 16 && b <= 31 => true,
             [192, 168, ..] => true,
@@ -482,7 +471,7 @@ impl Ipv4Addr {
     /// ```
     #[stable(since = "1.7.0", feature = "ip_17")]
     pub fn is_link_local(&self) -> bool {
-        match self.octets() {
+        match self.inner {
             [169, 254, ..] => true,
             _ => false,
         }
@@ -574,7 +563,7 @@ impl Ipv4Addr {
             && !self.is_reserved()
             && !self.is_benchmarking()
             // Make sure the address is not in 0.0.0.0/8
-            && self.octets()[0] != 0
+            && self.inner[0] != 0
     }
 
     /// Returns [`true`] if this address is part of the Shared Address Space defined in
@@ -594,7 +583,7 @@ impl Ipv4Addr {
     /// assert_eq!(Ipv4Addr::new(100, 128, 0, 0).is_shared(), false);
     /// ```
     pub fn is_shared(&self) -> bool {
-        self.octets()[0] == 100 && (self.octets()[1] & 0b1100_0000 == 0b0100_0000)
+        self.inner[0] == 100 && (self.inner[1] & 0b1100_0000 == 0b0100_0000)
     }
 
     /// Returns [`true`] if this address is part of `192.0.0.0/24`, which is reserved to
@@ -626,7 +615,7 @@ impl Ipv4Addr {
     /// assert_eq!(Ipv4Addr::new(191, 255, 255, 255).is_ietf_protocol_assignment(), false);
     /// ```
     pub fn is_ietf_protocol_assignment(&self) -> bool {
-        self.octets()[0] == 192 && self.octets()[1] == 0 && self.octets()[2] == 0
+        self.inner[0] == 192 && self.inner[1] == 0 && self.inner[2] == 0
     }
 
     /// Returns [`true`] if this address part of the `198.18.0.0/15` range, which is reserved for
@@ -649,7 +638,7 @@ impl Ipv4Addr {
     /// assert_eq!(Ipv4Addr::new(198, 20, 0, 0).is_benchmarking(), false);
     /// ```
     pub fn is_benchmarking(&self) -> bool {
-        self.octets()[0] == 198 && (self.octets()[1] & 0xfe) == 18
+        self.inner[0] == 198 && (self.inner[1] & 0xfe) == 18
     }
 
     /// Returns [`true`] if this address is reserved by IANA for future use. [IETF RFC 1112]
@@ -681,7 +670,7 @@ impl Ipv4Addr {
     /// assert_eq!(Ipv4Addr::new(255, 255, 255, 255).is_reserved(), false);
     /// ```
     pub fn is_reserved(&self) -> bool {
-        self.octets()[0] & 240 == 240 && !self.is_broadcast()
+        self.inner[0] & 240 == 240 && !self.is_broadcast()
     }
 
     /// Returns [`true`] if this is a multicast address (224.0.0.0/4).
@@ -703,7 +692,7 @@ impl Ipv4Addr {
     /// ```
     #[stable(since = "1.7.0", feature = "ip_17")]
     pub fn is_multicast(&self) -> bool {
-        self.octets()[0] >= 224 && self.octets()[0] <= 239
+        self.inner[0] >= 224 && self.inner[0] <= 239
     }
 
     /// Returns [`true`] if this is a broadcast address (255.255.255.255).
@@ -749,7 +738,7 @@ impl Ipv4Addr {
     /// ```
     #[stable(since = "1.7.0", feature = "ip_17")]
     pub fn is_documentation(&self) -> bool {
-        match self.octets() {
+        match self.inner {
             [192, 0, 2, _] => true,
             [198, 51, 100, _] => true,
             [203, 0, 113, _] => true,
@@ -775,12 +764,11 @@ impl Ipv4Addr {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     pub fn to_ipv6_compatible(&self) -> Ipv6Addr {
-        let octets = self.octets();
         Ipv6Addr::from([
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
-            octets[0], octets[1], octets[2], octets[3],
+            self.inner[0], self.inner[1], self.inner[2], self.inner[3],
         ])
     }
 
@@ -800,12 +788,11 @@ impl Ipv4Addr {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     pub fn to_ipv6_mapped(&self) -> Ipv6Addr {
-        let octets = self.octets();
         Ipv6Addr::from([
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0xFF, 0xFF,
-            octets[0], octets[1], octets[2], octets[3],
+            self.inner[0], self.inner[1], self.inner[2], self.inner[3],
         ])
     }
 }
@@ -837,8 +824,7 @@ impl From<Ipv6Addr> for IpAddr {
 #[stable(feature = "rust1", since = "1.0.0")]
 impl fmt::Display for Ipv4Addr {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let octets = self.octets();
-        write!(fmt, "{}.{}.{}.{}", octets[0], octets[1], octets[2], octets[3])
+        write!(fmt, "{}.{}.{}.{}", self.inner[0], self.inner[1], self.inner[2], self.inner[3])
     }
 }
 
@@ -857,7 +843,7 @@ impl Clone for Ipv4Addr {
 #[stable(feature = "rust1", since = "1.0.0")]
 impl PartialEq for Ipv4Addr {
     fn eq(&self, other: &Ipv4Addr) -> bool {
-        self.inner.s_addr == other.inner.s_addr
+        self.inner == other.inner
     }
 }
 
@@ -887,8 +873,7 @@ impl Eq for Ipv4Addr {}
 #[stable(feature = "rust1", since = "1.0.0")]
 impl hash::Hash for Ipv4Addr {
     fn hash<H: hash::Hasher>(&self, s: &mut H) {
-        // `inner` is #[repr(packed)], so we need to copy `s_addr`.
-        {self.inner.s_addr}.hash(s)
+        self.inner.hash(s)
     }
 }
 
@@ -922,16 +907,7 @@ impl PartialOrd<IpAddr> for Ipv4Addr {
 #[stable(feature = "rust1", since = "1.0.0")]
 impl Ord for Ipv4Addr {
     fn cmp(&self, other: &Ipv4Addr) -> Ordering {
-        u32::from_be(self.inner.s_addr).cmp(&u32::from_be(other.inner.s_addr))
-    }
-}
-
-impl AsInner<c::in_addr> for Ipv4Addr {
-    fn as_inner(&self) -> &c::in_addr { &self.inner }
-}
-impl FromInner<c::in_addr> for Ipv4Addr {
-    fn from_inner(addr: c::in_addr) -> Ipv4Addr {
-        Ipv4Addr { inner: addr }
+        self.inner.cmp(&other.inner)
     }
 }
 
@@ -948,8 +924,7 @@ impl From<Ipv4Addr> for u32 {
     /// assert_eq!(0x0d0c0b0au32, u32::from(addr));
     /// ```
     fn from(ip: Ipv4Addr) -> u32 {
-        let ip = ip.octets();
-        u32::from_be_bytes(ip)
+        u32::from_be_bytes(ip.inner)
     }
 }
 

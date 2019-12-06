@@ -8,7 +8,7 @@ use crate::net::{hton, ntoh, IpAddr, Ipv4Addr, Ipv6Addr};
 use crate::option;
 use crate::slice;
 use crate::sys::net::netc as c;
-use crate::sys_common::net::LookupHost;
+use crate::sys_common::net::{to_in_addr, LookupHost};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 use crate::vec;
 
@@ -277,7 +277,7 @@ impl SocketAddrV4 {
             inner: c::sockaddr_in {
                 sin_family: c::AF_INET as c::sa_family_t,
                 sin_port: hton(port),
-                sin_addr: *ip.as_inner(),
+                sin_addr: to_in_addr(&ip),
                 ..unsafe { mem::zeroed() }
             },
         }
@@ -295,7 +295,7 @@ impl SocketAddrV4 {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     pub fn ip(&self) -> &Ipv4Addr {
-        unsafe { &*(&self.inner.sin_addr as *const c::in_addr as *const Ipv4Addr) }
+        unsafe { &*(&self.inner.sin_addr.s_addr as *const u32 as *const Ipv4Addr) }
     }
 
     /// Changes the IP address associated with this socket address.
@@ -311,7 +311,7 @@ impl SocketAddrV4 {
     /// ```
     #[stable(feature = "sockaddr_setters", since = "1.9.0")]
     pub fn set_ip(&mut self, new_ip: Ipv4Addr) {
-        self.inner.sin_addr = *new_ip.as_inner()
+        self.inner.sin_addr = to_in_addr(&new_ip)
     }
 
     /// Returns the port number associated with this socket address.
