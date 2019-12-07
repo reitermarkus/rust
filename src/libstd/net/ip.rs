@@ -6,8 +6,6 @@
 use crate::cmp::Ordering;
 use crate::fmt;
 use crate::hash;
-use crate::sys::net::netc as c;
-use crate::sys_common::{AsInner, FromInner};
 
 /// An IP address, either IPv4 or IPv6.
 ///
@@ -115,7 +113,7 @@ pub struct Ipv4Addr {
 #[derive(Copy)]
 #[stable(feature = "rust1", since = "1.0.0")]
 pub struct Ipv6Addr {
-    inner: c::in6_addr,
+    inner: [u8; 16],
 }
 
 #[allow(missing_docs)]
@@ -993,18 +991,16 @@ impl Ipv6Addr {
     pub const fn new(a: u16, b: u16, c: u16, d: u16, e: u16, f: u16,
                      g: u16, h: u16) -> Ipv6Addr {
         Ipv6Addr {
-            inner: c::in6_addr {
-                s6_addr: [
-                    (a >> 8) as u8, a as u8,
-                    (b >> 8) as u8, b as u8,
-                    (c >> 8) as u8, c as u8,
-                    (d >> 8) as u8, d as u8,
-                    (e >> 8) as u8, e as u8,
-                    (f >> 8) as u8, f as u8,
-                    (g >> 8) as u8, g as u8,
-                    (h >> 8) as u8, h as u8
-                ],
-            }
+            inner: [
+                (a >> 8) as u8, a as u8,
+                (b >> 8) as u8, b as u8,
+                (c >> 8) as u8, c as u8,
+                (d >> 8) as u8, d as u8,
+                (e >> 8) as u8, e as u8,
+                (f >> 8) as u8, f as u8,
+                (g >> 8) as u8, g as u8,
+                (h >> 8) as u8, h as u8
+            ],
         }
 
     }
@@ -1047,7 +1043,7 @@ impl Ipv6Addr {
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
     pub fn segments(&self) -> [u16; 8] {
-        let arr = &self.inner.s6_addr;
+        let arr = &self.inner;
         [
             u16::from_be_bytes([arr[0], arr[1]]),
             u16::from_be_bytes([arr[2], arr[3]]),
@@ -1456,7 +1452,7 @@ impl Ipv6Addr {
     /// ```
     #[stable(feature = "ipv6_to_octets", since = "1.12.0")]
     pub const fn octets(&self) -> [u8; 16] {
-        self.inner.s6_addr
+        self.inner
     }
 }
 
@@ -1547,7 +1543,7 @@ impl Clone for Ipv6Addr {
 #[stable(feature = "rust1", since = "1.0.0")]
 impl PartialEq for Ipv6Addr {
     fn eq(&self, other: &Ipv6Addr) -> bool {
-        self.inner.s6_addr == other.inner.s6_addr
+        self.inner == other.inner
     }
 }
 
@@ -1577,7 +1573,7 @@ impl Eq for Ipv6Addr {}
 #[stable(feature = "rust1", since = "1.0.0")]
 impl hash::Hash for Ipv6Addr {
     fn hash<H: hash::Hasher>(&self, s: &mut H) {
-        self.inner.s6_addr.hash(s)
+        self.inner.hash(s)
     }
 }
 
@@ -1615,15 +1611,6 @@ impl Ord for Ipv6Addr {
     }
 }
 
-impl AsInner<c::in6_addr> for Ipv6Addr {
-    fn as_inner(&self) -> &c::in6_addr { &self.inner }
-}
-impl FromInner<c::in6_addr> for Ipv6Addr {
-    fn from_inner(addr: c::in6_addr) -> Ipv6Addr {
-        Ipv6Addr { inner: addr }
-    }
-}
-
 #[stable(feature = "i128", since = "1.26.0")]
 impl From<Ipv6Addr> for u128 {
     /// Convert an `Ipv6Addr` into a host byte order `u128`.
@@ -1640,8 +1627,7 @@ impl From<Ipv6Addr> for u128 {
     /// assert_eq!(0x102030405060708090A0B0C0D0E0F00D_u128, u128::from(addr));
     /// ```
     fn from(ip: Ipv6Addr) -> u128 {
-        let ip = ip.octets();
-        u128::from_be_bytes(ip)
+        u128::from_be_bytes(ip.inner)
     }
 }
 #[stable(feature = "i128", since = "1.26.0")]
@@ -1669,8 +1655,7 @@ impl From<u128> for Ipv6Addr {
 #[stable(feature = "ipv6_from_octets", since = "1.9.0")]
 impl From<[u8; 16]> for Ipv6Addr {
     fn from(octets: [u8; 16]) -> Ipv6Addr {
-        let inner = c::in6_addr { s6_addr: octets };
-        Ipv6Addr::from_inner(inner)
+        Ipv6Addr { inner: octets }
     }
 }
 

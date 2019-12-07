@@ -8,8 +8,8 @@ use crate::net::{hton, ntoh, IpAddr, Ipv4Addr, Ipv6Addr};
 use crate::option;
 use crate::slice;
 use crate::sys::net::netc as c;
-use crate::sys_common::net::{to_in_addr, LookupHost};
-use crate::sys_common::{AsInner, FromInner, IntoInner};
+use crate::sys_common::net::{to_in_addr, to_in6_addr, LookupHost};
+use crate::sys_common::{FromInner, IntoInner};
 use crate::vec;
 
 /// An internet socket address, either IPv4 or IPv6.
@@ -369,7 +369,7 @@ impl SocketAddrV6 {
             inner: c::sockaddr_in6 {
                 sin6_family: c::AF_INET6 as c::sa_family_t,
                 sin6_port: hton(port),
-                sin6_addr: *ip.as_inner(),
+                sin6_addr: to_in6_addr(&ip),
                 sin6_flowinfo: flowinfo,
                 sin6_scope_id: scope_id,
                 ..unsafe { mem::zeroed() }
@@ -405,7 +405,7 @@ impl SocketAddrV6 {
     /// ```
     #[stable(feature = "sockaddr_setters", since = "1.9.0")]
     pub fn set_ip(&mut self, new_ip: Ipv6Addr) {
-        self.inner.sin6_addr = *new_ip.as_inner()
+        self.inner.sin6_addr = to_in6_addr(&new_ip)
     }
 
     /// Returns the port number associated with this socket address.
