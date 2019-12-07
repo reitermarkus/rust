@@ -6,7 +6,7 @@ use crate::mem;
 use crate::net::{Shutdown, SocketAddr};
 use crate::str;
 use crate::sys::fd::FileDesc;
-use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr};
+use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr, with_sockaddr_ptr_and_len};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 use crate::time::{Duration, Instant};
 use libc::{self, c_int, c_void, size_t, sockaddr, socklen_t, EAI_SYSTEM, MSG_PEEK};
@@ -71,10 +71,9 @@ impl Socket {
 
     pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
-        let r = unsafe {
-            let (addrp, len) = addr.into_inner();
+        let r = with_sockaddr_ptr_and_len(addr, |addrp, len| unsafe {
             cvt(libc::connect(self.0.raw(), addrp, len))
-        };
+        });
         self.set_nonblocking(false)?;
 
         match r {

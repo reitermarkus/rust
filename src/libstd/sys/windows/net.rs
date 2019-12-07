@@ -9,7 +9,7 @@ use crate::sync::Once;
 use crate::sys::c;
 use crate::sys;
 use crate::sys_common::{self, AsInner, FromInner, IntoInner};
-use crate::sys_common::net;
+use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr, with_sockaddr_ptr_and_len};
 use crate::time::Duration;
 
 use libc::{c_int, c_void, c_ulong, c_long};
@@ -122,10 +122,9 @@ impl Socket {
 
     pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
-        let r = unsafe {
-            let (addrp, len) = addr.into_inner();
+        let r = with_sockaddr_ptr_and_len(addr, |addrp, len| unsafe {
             cvt(c::connect(self.0, addrp, len))
-        };
+        });
         self.set_nonblocking(false)?;
 
         match r {
@@ -283,10 +282,10 @@ impl Socket {
                               &mut storage as *mut _ as *mut _,
                               &mut addrlen) {
                 -1 if c::WSAGetLastError() == c::WSAESHUTDOWN => {
-                    Ok((0, net::sockaddr_to_addr(&storage, addrlen as usize)?))
+                    Ok((0, sockaddr_to_addr(&storage, addrlen as usize)?))
                 },
                 -1 => Err(last_error()),
-                n => Ok((n as usize, net::sockaddr_to_addr(&storage, addrlen as usize)?)),
+                n => Ok((n as usize, sockaddr_to_addr(&storage, addrlen as usize)?)),
             }
         }
     }
@@ -329,11 +328,11 @@ impl Socket {
             }
             None => 0
         };
-        net::setsockopt(self, c::SOL_SOCKET, kind, timeout)
+        setsockopt(self, c::SOL_SOCKET, kind, timeout)
     }
 
     pub fn timeout(&self, kind: c_int) -> io::Result<Option<Duration>> {
-        let raw: c::DWORD = net::getsockopt(self, c::SOL_SOCKET, kind)?;
+        let raw: c::DWORD = getsockopt(self, c::SOL_SOCKET, kind)?;
         if raw == 0 {
             Ok(None)
         } else {
@@ -377,16 +376,16 @@ impl Socket {
     }
 
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        net::setsockopt(self, c::IPPROTO_TCP, c::TCP_NODELAY, nodelay as c::BYTE)
+        setsockopt(self, c::IPPROTO_TCP, c::TCP_NODELAY, nodelay as c::BYTE)
     }
 
     pub fn nodelay(&self) -> io::Result<bool> {
-        let raw: c::BYTE = net::getsockopt(self, c::IPPROTO_TCP, c::TCP_NODELAY)?;
+        let raw: c::BYTE = getsockopt(self, c::IPPROTO_TCP, c::TCP_NODELAY)?;
         Ok(raw != 0)
     }
 
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        let raw: c_int = net::getsockopt(self, c::SOL_SOCKET, c::SO_ERROR)?;
+        let raw: c_int = getsockopt(self, c::SOL_SOCKET, c::SO_ERROR)?;
         if raw == 0 {
             Ok(None)
         } else {

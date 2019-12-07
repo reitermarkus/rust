@@ -4,11 +4,11 @@ use crate::ffi::CString;
 use crate::fmt;
 use crate::io::{self, Error, ErrorKind, IoSlice, IoSliceMut};
 use crate::mem;
-use crate::net::{Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr};
+use crate::net::{Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, SocketAddrV4, SocketAddrV6};
 use crate::ptr;
 use crate::sys::net::netc as c;
 use crate::sys::net::{cvt, cvt_gai, cvt_r, init, wrlen_t, Socket};
-use crate::sys_common::{AsInner, FromInner, IntoInner};
+use crate::sys_common::{AsInner, FromInner};
 use crate::time::Duration;
 
 use libc::{c_int, c_void};
@@ -123,22 +123,66 @@ where
     }
 }
 
+fn sockaddr_in_to_socketaddrv4(addr: &c::sockaddr_in) -> SocketAddrV4 {
+    let ip = Ipv4Addr::from(u32::from_be(addr.sin_addr.s_addr));
+    let port = u16::from_be(addr.sin_port);
+    SocketAddrV4::new(ip, port)
+}
+
+fn sockaddr_in6_to_socketaddrv6(addr: &c::sockaddr_in6) -> SocketAddrV6 {
+    let ip = Ipv6Addr::from(addr.sin6_addr.s6_addr);
+    let port = u16::from_be(addr.sin6_port);
+    let flowinfo = addr.sin6_flowinfo;
+    let scope_id = addr.sin6_scope_id;
+    SocketAddrV6::new(ip, port, flowinfo, scope_id)
+}
+
 pub fn sockaddr_to_addr(storage: &c::sockaddr_storage, len: usize) -> io::Result<SocketAddr> {
     match storage.ss_family as c_int {
         c::AF_INET => {
             assert!(len as usize >= mem::size_of::<c::sockaddr_in>());
-            Ok(SocketAddr::V4(FromInner::from_inner(unsafe {
-                *(storage as *const _ as *const c::sockaddr_in)
-            })))
+            Ok(SocketAddr::V4(sockaddr_in_to_socketaddrv4(
+                unsafe { &*(storage as *const _ as *const c::sockaddr_in) }
+            )))
         }
         c::AF_INET6 => {
             assert!(len as usize >= mem::size_of::<c::sockaddr_in6>());
-            Ok(SocketAddr::V6(FromInner::from_inner(unsafe {
-                *(storage as *const _ as *const c::sockaddr_in6)
-            })))
+            Ok(SocketAddr::V6(sockaddr_in6_to_socketaddrv6(
+                unsafe { &*(storage as *const _ as *const c::sockaddr_in6) }
+            )))
         }
         _ => Err(Error::new(ErrorKind::InvalidInput, "invalid argument")),
     }
+}
+
+pub fn with_sockaddr_ptr_and_len<T>(
+    addr: &SocketAddr,
+    f: impl FnOnce(*const c::sockaddr, c::socklen_t) -> T,
+) -> T {
+  match addr {
+    SocketAddr::V4(addr) => {
+        let addr = c::sockaddr_in {
+            sin_family: c::AF_INET as c::sa_family_t,
+            sin_port: u16::to_be(addr.port()),
+            sin_addr: to_in_addr(addr.ip()),
+            ..unsafe { mem::zeroed() }
+        };
+
+        f(&addr as *const _ as *const _, mem::size_of_val(&addr) as c::socklen_t)
+    },
+    SocketAddr::V6(addr) => {
+        let addr = c::sockaddr_in6 {
+            sin6_family: c::AF_INET6 as c::sa_family_t,
+            sin6_port: u16::to_be(addr.port()),
+            sin6_flowinfo: addr.flowinfo(),
+            sin6_addr: to_in6_addr(addr.ip()),
+            sin6_scope_id: addr.scope_id(),
+            ..unsafe { mem::zeroed() }
+        };
+
+        f(&addr as *const _ as *const _, mem::size_of_val(&addr) as c::socklen_t)
+    }
+  }
 }
 
 #[cfg(target_os = "android")]
@@ -260,8 +304,10 @@ impl TcpStream {
 
         let sock = Socket::new(addr, c::SOCK_STREAM)?;
 
-        let (addrp, len) = addr.into_inner();
-        cvt_r(|| unsafe { c::connect(*sock.as_inner(), addrp, len) })?;
+        with_sockaddr_ptr_and_len(addr, |addrp, len| unsafe {
+            cvt_r(|| c::connect(*sock.as_inner(), addrp, len))
+        })?;
+
         Ok(TcpStream { inner: sock })
     }
 
@@ -409,12 +455,14 @@ impl TcpListener {
             setsockopt(&sock, c::SOL_SOCKET, c::SO_REUSEADDR, 1 as c_int)?;
         }
 
-        // Bind our new socket
-        let (addrp, len) = addr.into_inner();
-        cvt(unsafe { c::bind(*sock.as_inner(), addrp, len as _) })?;
+        with_sockaddr_ptr_and_len(addr, |addrp, len| unsafe {
+          // Bind our new socket
+          cvt(c::bind(*sock.as_inner(), addrp, len as _))?;
 
-        // Start listening
-        cvt(unsafe { c::listen(*sock.as_inner(), 128) })?;
+          // Start listening
+          cvt(c::listen(*sock.as_inner(), 128))
+        })?;
+
         Ok(TcpListener { inner: sock })
     }
 
@@ -503,8 +551,11 @@ impl UdpSocket {
         init();
 
         let sock = Socket::new(addr, c::SOCK_DGRAM)?;
-        let (addrp, len) = addr.into_inner();
-        cvt(unsafe { c::bind(*sock.as_inner(), addrp, len as _) })?;
+
+        with_sockaddr_ptr_and_len(addr, |addrp, len| unsafe {
+            cvt_r(|| c::bind(*sock.as_inner(), addrp, len as _))
+        })?;
+
         Ok(UdpSocket { inner: sock })
     }
 
@@ -534,18 +585,17 @@ impl UdpSocket {
 
     pub fn send_to(&self, buf: &[u8], dst: &SocketAddr) -> io::Result<usize> {
         let len = cmp::min(buf.len(), <wrlen_t>::max_value() as usize) as wrlen_t;
-        let (dstp, dstlen) = dst.into_inner();
-        let ret = cvt(unsafe {
-            c::sendto(
+
+        Ok(with_sockaddr_ptr_and_len(dst, |dstp, dstlen| unsafe {
+            cvt(c::sendto(
                 *self.inner.as_inner(),
                 buf.as_ptr() as *const c_void,
                 len,
                 MSG_NOSIGNAL,
                 dstp,
                 dstlen,
-            )
-        })?;
-        Ok(ret as usize)
+            ))
+        })? as usize)
     }
 
     pub fn duplicate(&self) -> io::Result<UdpSocket> {
@@ -670,8 +720,9 @@ impl UdpSocket {
     }
 
     pub fn connect(&self, addr: io::Result<&SocketAddr>) -> io::Result<()> {
-        let (addrp, len) = addr?.into_inner();
-        cvt_r(|| unsafe { c::connect(*self.inner.as_inner(), addrp, len) }).map(|_| ())
+        with_sockaddr_ptr_and_len(addr?, |addrp, len| unsafe {
+            cvt_r(|| c::connect(*self.inner.as_inner(), addrp, len))
+        }).map(|_| ())
     }
 }
 
