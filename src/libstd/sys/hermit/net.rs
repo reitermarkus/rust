@@ -289,11 +289,11 @@ impl fmt::Debug for UdpSocket {
     }
 }
 
-pub struct LookupHost(Void);
+pub struct LookupHost(!);
 
 impl LookupHost {
     pub fn port(&self) -> u16 {
-        match self.0 {}
+        !
     }
 }
 
