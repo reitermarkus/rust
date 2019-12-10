@@ -166,6 +166,16 @@ impl Command {
     // allocation). Instead we just close it manually. This will never
     // have the drop glue anyway because this code never returns (the
     // child will either exec() or invoke libc::exit)
+    #[cfg(target_os = "freertos")]
+    unsafe fn do_exec(
+        &mut self,
+        stdio: ChildPipes,
+        maybe_envp: Option<&CStringArray>
+    ) -> Result<!, io::Error> {
+        unsupported()
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     unsafe fn do_exec(
         &mut self,
         stdio: ChildPipes,
