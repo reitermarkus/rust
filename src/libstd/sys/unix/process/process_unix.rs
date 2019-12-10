@@ -217,8 +217,8 @@ impl Command {
             cvt(libc::chdir(cwd.as_ptr()))?;
         }
 
-        // emscripten has no signal support.
-        #[cfg(not(target_os = "emscripten"))]
+        // emscripten and FreeRTOS have no signal support.
+        #[cfg(not(any(target_os = "emscripten", target_os = "freertos")))]
         {
             use crate::mem::MaybeUninit;
             // Reset signal handling so the child process starts in a
@@ -440,6 +440,15 @@ impl Process {
         }
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn wait(&mut self) -> io::Result<ExitStatus> {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "This function is not supported on FreeRTOS.",
+        ))
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn wait(&mut self) -> io::Result<ExitStatus> {
         use crate::sys::cvt_r;
         if let Some(status) = self.status {
@@ -451,6 +460,15 @@ impl Process {
         Ok(ExitStatus::new(status))
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn try_wait(&mut self) -> io::Result<Option<ExitStatus>> {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "This function is not supported on FreeRTOS.",
+        ))
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn try_wait(&mut self) -> io::Result<Option<ExitStatus>> {
         if let Some(status) = self.status {
             return Ok(Some(status));
