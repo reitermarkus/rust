@@ -12,6 +12,15 @@ use libc::c_int;
 
 pub struct AnonPipe(FileDesc);
 
+#[cfg(target_os = "freertos")]
+pub fn anon_pipe() -> io::Result<(AnonPipe, AnonPipe)> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn anon_pipe() -> io::Result<(AnonPipe, AnonPipe)> {
     syscall! { fn pipe2(fds: *mut c_int, flags: c_int) -> c_int }
     static INVALID: AtomicBool = AtomicBool::new(false);

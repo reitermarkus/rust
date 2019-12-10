@@ -910,6 +910,15 @@ impl File {
         self.0
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "This function is not supported on FreeRTOS.",
+        ))
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
         cvt_r(|| unsafe { libc::fchmod(self.0.raw(), perm.mode) })?;
         Ok(())
@@ -1035,6 +1044,15 @@ pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "freertos")]
+pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
     let p = cstr(p)?;
     cvt_r(|| unsafe { libc::chmod(p.as_ptr(), perm.mode) })?;
@@ -1047,6 +1065,15 @@ pub fn rmdir(p: &Path) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "freertos")]
+pub fn readlink(p: &Path) -> io::Result<PathBuf> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn readlink(p: &Path) -> io::Result<PathBuf> {
     let c_path = cstr(p)?;
     let p = c_path.as_ptr();
@@ -1074,6 +1101,15 @@ pub fn readlink(p: &Path) -> io::Result<PathBuf> {
     }
 }
 
+#[cfg(target_os = "freertos")]
+pub fn symlink(src: &Path, dst: &Path) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn symlink(src: &Path, dst: &Path) -> io::Result<()> {
     let src = cstr(src)?;
     let dst = cstr(dst)?;
@@ -1126,6 +1162,15 @@ pub fn lstat(p: &Path) -> io::Result<FileAttr> {
     Ok(FileAttr::from_stat64(stat))
 }
 
+#[cfg(target_os = "freertos")]
+pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
     let path = CString::new(p.as_os_str().as_bytes())?;
     let buf;

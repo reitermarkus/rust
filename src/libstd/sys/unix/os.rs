@@ -143,6 +143,15 @@ pub fn getcwd() -> io::Result<PathBuf> {
     }
 }
 
+#[cfg(target_os = "freertos")]
+pub fn chdir(p: &path::Path) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn chdir(p: &path::Path) -> io::Result<()> {
     let p: &OsStr = p.as_ref();
     let p = CString::new(p.as_bytes())?;
