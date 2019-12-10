@@ -117,6 +117,15 @@ pub fn error_string(errno: i32) -> String {
     }
 }
 
+#[cfg(target_os = "freertos")]
+pub fn getcwd() -> io::Result<PathBuf> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn getcwd() -> io::Result<PathBuf> {
     let mut buf = Vec::with_capacity(512);
     loop {

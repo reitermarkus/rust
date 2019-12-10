@@ -87,6 +87,15 @@ impl Socket {
         }
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "This function is not supported on FreeRTOS.",
+        ))
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
         unsafe {
             let mut fds = [0, 0];

@@ -88,11 +88,11 @@ pub fn init() {
         reset_sigpipe();
     }
 
-    #[cfg(not(any(target_os = "emscripten", target_os = "fuchsia")))]
+    #[cfg(not(any(target_os = "emscripten", target_os = "fuchsia", target_os = "freertos")))]
     unsafe fn reset_sigpipe() {
         assert!(signal(libc::SIGPIPE, libc::SIG_IGN) != libc::SIG_ERR);
     }
-    #[cfg(any(target_os = "emscripten", target_os = "fuchsia"))]
+    #[cfg(any(target_os = "emscripten", target_os = "fuchsia", target_os = "freertos"))]
     unsafe fn reset_sigpipe() {}
 }
 

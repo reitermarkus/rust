@@ -839,7 +839,13 @@ impl File {
         #[cfg(target_os = "android")]
         return crate::sys::android::ftruncate64(self.0.raw(), size);
 
-        #[cfg(not(target_os = "android"))]
+        #[cfg(target_os = "freertos")]
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "This function is not supported on FreeRTOS.",
+        ));
+
+        #[cfg(not(any(target_os = "android", target_os = "freertos")))]
         {
             use crate::convert::TryInto;
             let size: off64_t =
@@ -1143,6 +1149,15 @@ pub fn stat(p: &Path) -> io::Result<FileAttr> {
     Ok(FileAttr::from_stat64(stat))
 }
 
+#[cfg(target_os = "freertos")]
+pub fn lstat(p: &Path) -> io::Result<FileAttr> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "This function is not supported on FreeRTOS.",
+    ))
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn lstat(p: &Path) -> io::Result<FileAttr> {
     let p = cstr(p)?;
 
