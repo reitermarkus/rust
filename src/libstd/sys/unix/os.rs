@@ -609,6 +609,12 @@ pub fn getpid() -> u32 {
     unsafe { libc::getpid() as u32 }
 }
 
+#[cfg(target_os = "freertos")]
+pub fn getppid() -> u32 {
+    0
+}
+
+#[cfg(not(target_os = "freertos"))]
 pub fn getppid() -> u32 {
     unsafe { libc::getppid() as u32 }
 }
