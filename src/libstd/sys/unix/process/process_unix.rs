@@ -4,6 +4,7 @@ use crate::ptr;
 use crate::sys;
 use crate::sys::cvt;
 use crate::sys::process::process_common::*;
+use crate::sys::{self, unsupported};
 
 use libc::{c_int, gid_t, pid_t, uid_t};
 
