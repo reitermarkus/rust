@@ -722,6 +722,15 @@ impl File {
         File::open_c(&path, opts)
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn open_c(path: &CStr, opts: &OpenOptions) -> io::Result<File> {
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "This function is not supported on FreeRTOS.",
+        ))
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn open_c(path: &CStr, opts: &OpenOptions) -> io::Result<File> {
         let flags = libc::O_CLOEXEC
             | opts.get_access_mode()?
