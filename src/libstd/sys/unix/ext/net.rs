@@ -25,7 +25,7 @@ use crate::net::{self, Shutdown};
 use crate::os::unix::ffi::OsStrExt;
 use crate::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd};
 use crate::path::Path;
-use crate::sys::net::Socket;
+use crate::sys::net::{netc as c, Socket};
 use crate::sys::{self, cvt};
 use crate::sys_common::{self, AsInner, FromInner, IntoInner};
 use crate::time::Duration;
@@ -384,7 +384,7 @@ impl UnixStream {
     /// ```
     #[stable(feature = "unix_socket", since = "1.10.0")]
     pub fn local_addr(&self) -> io::Result<SocketAddr> {
-        SocketAddr::new(|addr, len| unsafe { libc::getsockname(*self.0.as_inner(), addr, len) })
+        SocketAddr::new(|addr, len| unsafe { c::getsockname(*self.0.as_inner(), addr, len) })
     }
 
     /// Returns the socket address of the remote half of this connection.
@@ -402,7 +402,7 @@ impl UnixStream {
     /// ```
     #[stable(feature = "unix_socket", since = "1.10.0")]
     pub fn peer_addr(&self) -> io::Result<SocketAddr> {
-        SocketAddr::new(|addr, len| unsafe { libc::getpeername(*self.0.as_inner(), addr, len) })
+        SocketAddr::new(|addr, len| unsafe { c::getpeername(*self.0.as_inner(), addr, len) })
     }
 
     /// Sets the read timeout for the socket.
@@ -918,7 +918,7 @@ impl UnixListener {
     /// ```
     #[stable(feature = "unix_socket", since = "1.10.0")]
     pub fn local_addr(&self) -> io::Result<SocketAddr> {
-        SocketAddr::new(|addr, len| unsafe { libc::getsockname(*self.0.as_inner(), addr, len) })
+        SocketAddr::new(|addr, len| unsafe { c::getsockname(*self.0.as_inner(), addr, len) })
     }
 
     /// Moves the socket into or out of nonblocking mode.
@@ -1280,7 +1280,7 @@ impl UnixDatagram {
     /// ```
     #[stable(feature = "unix_socket", since = "1.10.0")]
     pub fn local_addr(&self) -> io::Result<SocketAddr> {
-        SocketAddr::new(|addr, len| unsafe { libc::getsockname(*self.0.as_inner(), addr, len) })
+        SocketAddr::new(|addr, len| unsafe { c::getsockname(*self.0.as_inner(), addr, len) })
     }
 
     /// Returns the address of this socket's peer.
@@ -1304,7 +1304,7 @@ impl UnixDatagram {
     /// ```
     #[stable(feature = "unix_socket", since = "1.10.0")]
     pub fn peer_addr(&self) -> io::Result<SocketAddr> {
-        SocketAddr::new(|addr, len| unsafe { libc::getpeername(*self.0.as_inner(), addr, len) })
+        SocketAddr::new(|addr, len| unsafe { c::getpeername(*self.0.as_inner(), addr, len) })
     }
 
     /// Receives data from the socket.
@@ -1329,7 +1329,7 @@ impl UnixDatagram {
     pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
         let mut count = 0;
         let addr = SocketAddr::new(|addr, len| unsafe {
-            count = libc::recvfrom(
+            count = c::recvfrom(
                 *self.0.as_inner(),
                 buf.as_mut_ptr() as *mut _,
                 buf.len(),
@@ -1391,7 +1391,7 @@ impl UnixDatagram {
             unsafe {
                 let (addr, len) = sockaddr_un(path)?;
 
-                let count = cvt(libc::sendto(
+                let count = cvt(c::sendto(
                     *d.0.as_inner(),
                     buf.as_ptr() as *const _,
                     buf.len(),

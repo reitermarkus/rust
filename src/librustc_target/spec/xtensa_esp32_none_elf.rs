@@ -14,6 +14,7 @@ pub fn target() -> TargetResult {
         linker_flavor: LinkerFlavor::Gcc,
 
         options: TargetOptions {
+            features: "+lwip".to_string(),
             executables: true,
             target_family: Some("unix".to_string()),
             cpu: "esp32".to_string(),

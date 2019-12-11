@@ -13,8 +13,100 @@ use libc::{c_int, c_void, size_t, sockaddr, socklen_t, EAI_SYSTEM, MSG_PEEK};
 
 pub use crate::sys::{cvt, cvt_r};
 
-#[allow(unused_extern_crates)]
-pub extern crate libc as netc;
+pub mod netc {
+    #[cfg(target_feature = "lwip")]
+    mod lwip {
+        pub use libc::{
+            c_int, AF_INET, AF_INET6, sa_family_t, in_addr, sockaddr_in, in6_addr,
+            sockaddr_in6, sockaddr, socklen_t, IPPROTO_IP, IPV6_JOIN_GROUP, IPPROTO_IPV6, IP_TTL,
+            ipv6_mreq, ip_mreq, IP_ADD_MEMBERSHIP, IPV6_MULTICAST_LOOP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP,
+            IP_MULTICAST_TTL, SO_BROADCAST, SOL_SOCKET, SO_SNDTIMEO, SO_RCVTIMEO, SOCK_DGRAM, sockaddr_storage,
+            IPV6_V6ONLY, SOCK_STREAM, SO_REUSEADDR, addrinfo, IPV6_LEAVE_GROUP,
+        };
+
+        extern "C" {
+            fn lwip_accept(s: c_int, addr: *mut sockaddr, addrlen: socklen_t) -> c_int;
+            fn lwip_bind(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
+            fn lwip_connect(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
+            fn lwip_getaddrinfo(nodename: *const c_char, servname: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> c_int;
+            fn lwip_freeaddrinfo(ai: *mut addrinfo);
+            fn lwip_getsockname(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
+            fn lwip_getpeername(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
+            fn lwip_listen(s: c_int, backlog: c_int) -> c_int;
+            fn lwip_send(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int) -> ssize_t;
+            fn lwip_sendto(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int, to: *mut sockaddr, tolen: socklen_t) -> ssize_t;
+            fn lwip_recv(s: c_int, mem: *mut c_void, len: size_t, flags: c_int) -> ssize_t;
+            fn lwip_recvfrom(s: c_int, mem: *mut c_void, len: size_t, flags: c_int, from: *mut sockaddr, fromlen: *mut socklen_t) -> ssize_t;
+            fn lwip_getsockopt(s: c_int, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut socklen_t) -> c_int;
+            fn lwip_setsockopt(s: c_int, level: c_int, optname: c_int, optval: *const c_void, optlen: socklen_t) -> c_int;
+        }
+
+        pub unsafe fn recv(s: c_int, mem: *mut c_void, len: size_t, flags: c_int) -> ssize_t {
+            lwip_recv(s, mem, len, flags)
+        }
+
+        pub unsafe fn recvfrom(s: c_int, mem: *mut c_void, len: size_t, flags: c_int, from: *mut sockaddr, fromlen: *mut socklen_t) -> ssize_t {
+          lwip_recvfrom(s, mem, len, flags, from, fromlen)
+        }
+
+        pub unsafe fn getsockname(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int {
+            lwip_getsockname(s, name, namelen)
+        }
+
+        pub unsafe fn getpeername(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int {
+            lwip_getpeername(s, name, namelen)
+        }
+        pub unsafe fn getaddrinfo(nodename: *const c_char, servname: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> c_int {
+            lwip_getaddrinfo(nodename, servname, hints, res)
+        }
+
+        pub unsafe fn connect(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int {
+            lwip_connect(s, name, namelen)
+        }
+
+        pub unsafe fn send(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int) -> ssize_t {
+            lwip_send(s, dataptr, size, flags)
+        }
+
+        pub unsafe fn setsockopt(s: c_int, level: c_int, optname: c_int, optval: *const c_void, optlen: socklen_t) -> c_int {
+            lwip_setsockopt(s, level, optname, optval, optlen)
+        }
+
+        pub unsafe fn getsockopt(s: c_int, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut socklen_t) -> c_int {
+            lwip_getsockopt(s, level, optname, optval, optlen)
+        }
+
+        pub unsafe fn bind(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int {
+            lwip_bind(s, name, namelen)
+        }
+
+        pub unsafe fn accept(s: c_int, addr: *mut sockaddr, addrlen: socklen_t) -> c_int {
+            lwip_accept(s, addr, addrlen)
+        }
+
+        pub unsafe fn sendto(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int, to: *mut sockaddr, tolen: socklen_t) -> ssize_t {
+            lwip_sendto(s, dataptr, size, flags, to, tolen)
+        }
+
+        pub unsafe fn listen(s: c_int, backlog: c_int) -> c_int {
+            lwip_listen(s, backlog)
+        }
+
+        pub unsafe fn freeaddrinfo(ai: *mut addrinfo) {
+            lwip_freeaddrinfo(ai)
+        }
+
+        pub unsafe fn shutdown(s: c_int, how: c_int) -> c_int {
+            lwip_shutdown(s, how)
+        }
+    }
+
+    #[cfg(target_feature = "lwip")]
+    pub use lwip::*;
+
+    #[cfg(not(target_feature = "lwip"))]
+    pub use libc::*;
+}
 
 pub type wrlen_t = size_t;
 
@@ -218,7 +310,7 @@ impl Socket {
             }
         }
 
-        let fd = cvt_r(|| unsafe { libc::accept(self.0.raw(), storage, len) })?;
+        let fd = cvt_r(|| unsafe { netc::accept(self.0.raw(), storage, len) })?;
         let fd = FileDesc::new(fd);
 
         // Setting CLOEXEC is not supported on FreeRTOS since
@@ -235,7 +327,7 @@ impl Socket {
 
     fn recv_with_flags(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            libc::recv(self.0.raw(), buf.as_mut_ptr() as *mut c_void, buf.len(), flags)
+            netc::recv(self.0.raw(), buf.as_mut_ptr() as *mut c_void, buf.len(), flags)
         })?;
         Ok(ret as usize)
     }
@@ -266,7 +358,7 @@ impl Socket {
         let mut addrlen = mem::size_of_val(&storage) as libc::socklen_t;
 
         let n = cvt(unsafe {
-            libc::recvfrom(
+            netc::recvfrom(
                 self.0.raw(),
                 buf.as_mut_ptr() as *mut c_void,
                 buf.len(),
@@ -345,7 +437,7 @@ impl Socket {
             Shutdown::Read => libc::SHUT_RD,
             Shutdown::Both => libc::SHUT_RDWR,
         };
-        cvt(unsafe { libc::shutdown(self.0.raw(), how) })?;
+        cvt(unsafe { netc::shutdown(self.0.raw(), how) })?;
         Ok(())
     }
 

@@ -249,6 +249,10 @@ const RISCV_WHITELIST: &[(&str, Option<Symbol>)] = &[
 const WASM_WHITELIST: &[(&str, Option<Symbol>)] =
     &[("simd128", Some(sym::wasm_target_feature)), ("atomics", Some(sym::wasm_target_feature))];
 
+const XTENSA_WHITELIST: &[(&str, Option<Symbol>)] = &[
+    ("lwip", None),
+];
+
 /// When rustdoc is running, provide a list of all known features so that all their respective
 /// primitives may be documented.
 ///
@@ -265,6 +269,7 @@ pub fn all_known_features() -> impl Iterator<Item = (&'static str, Option<Symbol
         .chain(MIPS_WHITELIST.iter().cloned())
         .chain(RISCV_WHITELIST.iter().cloned())
         .chain(WASM_WHITELIST.iter().cloned())
+        .chain(XTENSA_WHITELIST.iter().cloned())
 }
 
 pub fn to_llvm_feature<'a>(sess: &Session, s: &'a str) -> &'a str {
