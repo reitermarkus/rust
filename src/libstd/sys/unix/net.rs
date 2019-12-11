@@ -17,7 +17,7 @@ pub mod netc {
     #[cfg(target_os = "freertos")]
     mod lwip {
         pub use libc::{
-            c_int, c_void, c_char, c_long, size_t, ssize_t, AF_INET, AF_INET6, sa_family_t, in_addr, sockaddr_in, in6_addr,
+            c_int, c_void, c_char, c_long, c_ulong, size_t, ssize_t, AF_INET, AF_INET6, sa_family_t, in_addr, sockaddr_in, in6_addr,
             sockaddr_in6, sockaddr, socklen_t, IPPROTO_IP, IPV6_JOIN_GROUP, IPPROTO_IPV6, IP_TTL,
             ipv6_mreq, ip_mreq, IP_ADD_MEMBERSHIP, IPV6_MULTICAST_LOOP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP,
             IP_MULTICAST_TTL, SO_BROADCAST, SOL_SOCKET, SO_SNDTIMEO, SO_RCVTIMEO, SOCK_DGRAM, sockaddr_storage,
