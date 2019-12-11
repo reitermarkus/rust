@@ -14,97 +14,67 @@ use libc::{c_int, c_void, size_t, sockaddr, socklen_t, EAI_SYSTEM, MSG_PEEK};
 pub use crate::sys::{cvt, cvt_r};
 
 pub mod netc {
-    #[cfg(target_feature = "lwip")]
+    #[cfg(target_os = "freertos")]
     mod lwip {
         pub use libc::{
-            c_int, AF_INET, AF_INET6, sa_family_t, in_addr, sockaddr_in, in6_addr,
+            c_int, c_void, c_char, c_long, size_t, ssize_t, AF_INET, AF_INET6, sa_family_t, in_addr, sockaddr_in, in6_addr,
             sockaddr_in6, sockaddr, socklen_t, IPPROTO_IP, IPV6_JOIN_GROUP, IPPROTO_IPV6, IP_TTL,
             ipv6_mreq, ip_mreq, IP_ADD_MEMBERSHIP, IPV6_MULTICAST_LOOP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP,
             IP_MULTICAST_TTL, SO_BROADCAST, SOL_SOCKET, SO_SNDTIMEO, SO_RCVTIMEO, SOCK_DGRAM, sockaddr_storage,
-            IPV6_V6ONLY, SOCK_STREAM, SO_REUSEADDR, addrinfo, IPV6_LEAVE_GROUP,
+            IPV6_V6ONLY, SOCK_STREAM, SO_REUSEADDR, addrinfo, IPV6_LEAVE_GROUP, IPV6_DROP_MEMBERSHIP, IPV6_ADD_MEMBERSHIP,
+            iovec,
         };
 
         extern "C" {
-            fn lwip_accept(s: c_int, addr: *mut sockaddr, addrlen: socklen_t) -> c_int;
-            fn lwip_bind(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
-            fn lwip_connect(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
-            fn lwip_getaddrinfo(nodename: *const c_char, servname: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> c_int;
-            fn lwip_freeaddrinfo(ai: *mut addrinfo);
-            fn lwip_getsockname(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
-            fn lwip_getpeername(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
-            fn lwip_listen(s: c_int, backlog: c_int) -> c_int;
-            fn lwip_send(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int) -> ssize_t;
-            fn lwip_sendto(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int, to: *mut sockaddr, tolen: socklen_t) -> ssize_t;
-            fn lwip_recv(s: c_int, mem: *mut c_void, len: size_t, flags: c_int) -> ssize_t;
-            fn lwip_recvfrom(s: c_int, mem: *mut c_void, len: size_t, flags: c_int, from: *mut sockaddr, fromlen: *mut socklen_t) -> ssize_t;
-            fn lwip_getsockopt(s: c_int, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut socklen_t) -> c_int;
-            fn lwip_setsockopt(s: c_int, level: c_int, optname: c_int, optval: *const c_void, optlen: socklen_t) -> c_int;
-        }
-
-        pub unsafe fn recv(s: c_int, mem: *mut c_void, len: size_t, flags: c_int) -> ssize_t {
-            lwip_recv(s, mem, len, flags)
-        }
-
-        pub unsafe fn recvfrom(s: c_int, mem: *mut c_void, len: size_t, flags: c_int, from: *mut sockaddr, fromlen: *mut socklen_t) -> ssize_t {
-          lwip_recvfrom(s, mem, len, flags, from, fromlen)
-        }
-
-        pub unsafe fn getsockname(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int {
-            lwip_getsockname(s, name, namelen)
-        }
-
-        pub unsafe fn getpeername(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int {
-            lwip_getpeername(s, name, namelen)
-        }
-        pub unsafe fn getaddrinfo(nodename: *const c_char, servname: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> c_int {
-            lwip_getaddrinfo(nodename, servname, hints, res)
-        }
-
-        pub unsafe fn connect(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int {
-            lwip_connect(s, name, namelen)
-        }
-
-        pub unsafe fn send(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int) -> ssize_t {
-            lwip_send(s, dataptr, size, flags)
-        }
-
-        pub unsafe fn setsockopt(s: c_int, level: c_int, optname: c_int, optval: *const c_void, optlen: socklen_t) -> c_int {
-            lwip_setsockopt(s, level, optname, optval, optlen)
-        }
-
-        pub unsafe fn getsockopt(s: c_int, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut socklen_t) -> c_int {
-            lwip_getsockopt(s, level, optname, optval, optlen)
-        }
-
-        pub unsafe fn bind(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int {
-            lwip_bind(s, name, namelen)
-        }
-
-        pub unsafe fn accept(s: c_int, addr: *mut sockaddr, addrlen: socklen_t) -> c_int {
-            lwip_accept(s, addr, addrlen)
-        }
-
-        pub unsafe fn sendto(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int, to: *mut sockaddr, tolen: socklen_t) -> ssize_t {
-            lwip_sendto(s, dataptr, size, flags, to, tolen)
-        }
-
-        pub unsafe fn listen(s: c_int, backlog: c_int) -> c_int {
-            lwip_listen(s, backlog)
-        }
-
-        pub unsafe fn freeaddrinfo(ai: *mut addrinfo) {
-            lwip_freeaddrinfo(ai)
-        }
-
-        pub unsafe fn shutdown(s: c_int, how: c_int) -> c_int {
-            lwip_shutdown(s, how)
+            #[link_name = "lwip_read"]
+            pub fn read(s: c_int, mem: *mut c_void, len: size_t) -> ssize_t;
+            #[link_name = "lwip_readv"]
+            pub fn readv(s: c_int, iov: *const iovec, iovcnt: c_int) -> ssize_t;
+            #[link_name = "lwip_write"]
+            pub fn write(s: c_int, dataptr: *const c_void, len: size_t) -> ssize_t;
+            #[link_name = "lwip_writev"]
+            pub fn writev(s: c_int, iov: *const iovec, iovcnt: c_int) -> ssize_t;
+            #[link_name = "lwip_accept"]
+            pub fn accept(s: c_int, addr: *mut sockaddr, addrlen: *mut socklen_t) -> c_int;
+            #[link_name = "lwip_bind"]
+            pub fn bind(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
+            #[link_name = "lwip_connect"]
+            pub fn connect(s: c_int, name: *const sockaddr, namelen: socklen_t) -> c_int;
+            #[link_name = "lwip_ioctl"]
+            pub fn ioctl(fd: c_int, request: c_ulong, ...) -> c_int;
+            #[link_name = "lwip_getaddrinfo"]
+            pub fn getaddrinfo(nodename: *const c_char, servname: *const c_char, hints: *const addrinfo, res: *mut *mut addrinfo) -> c_int;
+            #[link_name = "lwip_freeaddrinfo"]
+            pub fn freeaddrinfo(ai: *mut addrinfo);
+            #[link_name = "lwip_getsockname"]
+            pub fn getsockname(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
+            #[link_name = "lwip_getpeername"]
+            pub fn getpeername(s: c_int, name: *mut sockaddr, namelen: *mut socklen_t) -> c_int;
+            #[link_name = "lwip_listen"]
+            pub fn listen(s: c_int, backlog: c_int) -> c_int;
+            #[link_name = "lwip_send"]
+            pub fn send(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int) -> ssize_t;
+            #[link_name = "lwip_sendto"]
+            pub fn sendto(s: c_int, dataptr: *const c_void, size: size_t, flags: c_int, to: *const sockaddr, tolen: socklen_t) -> ssize_t;
+            #[link_name = "lwip_recv"]
+            pub fn recv(s: c_int, mem: *mut c_void, len: size_t, flags: c_int) -> ssize_t;
+            #[link_name = "lwip_recvfrom"]
+            pub fn recvfrom(s: c_int, mem: *mut c_void, len: size_t, flags: c_int, from: *mut sockaddr, fromlen: *mut socklen_t) -> ssize_t;
+            #[link_name = "lwip_getsockopt"]
+            pub fn getsockopt(s: c_int, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut socklen_t) -> c_int;
+            #[link_name = "lwip_setsockopt"]
+            pub fn setsockopt(s: c_int, level: c_int, optname: c_int, optval: *const c_void, optlen: socklen_t) -> c_int;
+            #[link_name = "lwip_shutdown"]
+            pub fn shutdown(s: c_int, how: c_int) -> c_int;
+            #[link_name = "lwip_socket"]
+            pub fn socket(domain: c_int, r#type: c_int, protocol: c_int) -> c_int;
         }
     }
 
-    #[cfg(target_feature = "lwip")]
+    #[cfg(target_os = "freertos")]
     pub use lwip::*;
 
-    #[cfg(not(target_feature = "lwip"))]
+    #[cfg(not(target_os = "freertos"))]
     pub use libc::*;
 }
 
@@ -126,6 +96,10 @@ pub fn cvt_gai(err: c_int) -> io::Result<()> {
         return Err(io::Error::last_os_error());
     }
 
+    #[cfg(target_os = "freertos")]
+    let detail = format!("error code {}", err);
+
+    #[cfg(not(target_os = "freertos"))]
     let detail = unsafe {
         str::from_utf8(CStr::from_ptr(libc::gai_strerror(err)).to_bytes()).unwrap().to_owned()
     };
@@ -153,14 +127,14 @@ impl Socket {
             // fallthrough to the fallback.
             #[cfg(target_os = "linux")]
             {
-                match cvt(libc::socket(fam, ty | libc::SOCK_CLOEXEC, 0)) {
+                match cvt(netc::socket(fam, ty | netc::SOCK_CLOEXEC, 0)) {
                     Ok(fd) => return Ok(Socket(FileDesc::new(fd))),
                     Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
                     Err(e) => return Err(e),
                 }
             }
 
-            let fd = cvt(libc::socket(fam, ty, 0))?;
+            let fd = cvt(netc::socket(fam, ty, 0))?;
             let fd = FileDesc::new(fd);
 
             // Setting CLOEXEC is not supported on FreeRTOS since
@@ -173,7 +147,7 @@ impl Socket {
             // macOS and iOS use `SO_NOSIGPIPE` as a `setsockopt`
             // flag to disable `SIGPIPE` emission on socket.
             #[cfg(target_vendor = "apple")]
-            setsockopt(&socket, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1)?;
+            setsockopt(&socket, netc::SOL_SOCKET, netc::SO_NOSIGPIPE, 1)?;
 
             Ok(socket)
         }
@@ -195,7 +169,7 @@ impl Socket {
             // Like above, see if we can set cloexec atomically
             #[cfg(target_os = "linux")]
             {
-                match cvt(libc::socketpair(fam, ty | libc::SOCK_CLOEXEC, 0, fds.as_mut_ptr())) {
+                match cvt(netc::socketpair(fam, ty | netc::SOCK_CLOEXEC, 0, fds.as_mut_ptr())) {
                     Ok(_) => {
                         return Ok((Socket(FileDesc::new(fds[0])), Socket(FileDesc::new(fds[1]))));
                     }
@@ -224,7 +198,7 @@ impl Socket {
         self.set_nonblocking(true)?;
         let r = unsafe {
             let (addrp, len) = addr.into_inner();
-            cvt(libc::connect(self.0.raw(), addrp, len))
+            cvt(netc::connect(self.0.raw(), addrp, len))
         };
         self.set_nonblocking(false)?;
 
@@ -302,7 +276,7 @@ impl Socket {
                     flags: c_int
                 ) -> c_int
             }
-            let res = cvt_r(|| unsafe { accept4(self.0.raw(), storage, len, libc::SOCK_CLOEXEC) });
+            let res = cvt_r(|| unsafe { accept4(self.0.raw(), storage, len, netc::SOCK_CLOEXEC) });
             match res {
                 Ok(fd) => return Ok(Socket(FileDesc::new(fd))),
                 Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
@@ -341,7 +315,12 @@ impl Socket {
     }
 
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        self.0.read_vectored(bufs)
+        let ret = cvt(unsafe {
+            netc::readv(self.0.raw(),
+                        bufs.as_ptr() as *const libc::iovec,
+                        cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
+        })?;
+        Ok(ret as usize)
     }
 
     #[inline]
@@ -383,7 +362,12 @@ impl Socket {
     }
 
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        self.0.write_vectored(bufs)
+        let ret = cvt(unsafe {
+            netc::writev(self.0.raw(),
+                         bufs.as_ptr() as *const libc::iovec,
+                         cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
+        })?;
+        Ok(ret as usize)
     }
 
     #[inline]
@@ -453,22 +437,8 @@ impl Socket {
     #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         let mut nonblocking = nonblocking as libc::c_int;
-        cvt(unsafe {
-            #[cfg(not(target_os = "freertos"))]
-            {
-                libc::ioctl(*self.as_inner(), libc::FIONBIO, &mut nonblocking)
-            }
-
-            #[cfg(target_os = "freertos")]
-            {
-                extern "C" {
-                    fn lwip_ioctl(fd: libc::c_int, request: libc::c_long, ...) -> libc::c_int;
-                }
-
-                lwip_ioctl(*self.as_inner(), libc::FIONBIO as libc::c_long, &mut nonblocking)
-            }
-        })
-        .map(drop)
+        cvt(unsafe { netc::ioctl(*self.as_inner(), netc::FIONBIO, &mut nonblocking) })
+            .map(drop)
     }
 
     #[cfg(any(target_os = "solaris", target_os = "illumos"))]

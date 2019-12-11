@@ -316,7 +316,7 @@ impl UnixStream {
                 let inner = Socket::new_raw(libc::AF_UNIX, libc::SOCK_STREAM)?;
                 let (addr, len) = sockaddr_un(path)?;
 
-                cvt(libc::connect(*inner.as_inner(), &addr as *const _ as *const _, len))?;
+                cvt(c::connect(*inner.as_inner(), &addr as *const _ as *const _, len))?;
                 Ok(UnixStream(inner))
             }
         }
@@ -840,8 +840,8 @@ impl UnixListener {
                 let inner = Socket::new_raw(libc::AF_UNIX, libc::SOCK_STREAM)?;
                 let (addr, len) = sockaddr_un(path)?;
 
-                cvt(libc::bind(*inner.as_inner(), &addr as *const _ as *const _, len as _))?;
-                cvt(libc::listen(*inner.as_inner(), 128))?;
+                cvt(c::bind(*inner.as_inner(), &addr as *const _ as *const _, len as _))?;
+                cvt(c::listen(*inner.as_inner(), 128))?;
 
                 Ok(UnixListener(inner))
             }
@@ -1151,7 +1151,7 @@ impl UnixDatagram {
                 let socket = UnixDatagram::unbound()?;
                 let (addr, len) = sockaddr_un(path)?;
 
-                cvt(libc::bind(*socket.0.as_inner(), &addr as *const _ as *const _, len as _))?;
+                cvt(c::bind(*socket.0.as_inner(), &addr as *const _ as *const _, len as _))?;
 
                 Ok(socket)
             }
@@ -1235,7 +1235,7 @@ impl UnixDatagram {
             unsafe {
                 let (addr, len) = sockaddr_un(path)?;
 
-                cvt(libc::connect(*d.0.as_inner(), &addr as *const _ as *const _, len))?;
+                cvt(c::connect(*d.0.as_inner(), &addr as *const _ as *const _, len))?;
 
                 Ok(())
             }
