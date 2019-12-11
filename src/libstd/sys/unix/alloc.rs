@@ -52,9 +52,13 @@ unsafe impl GlobalAlloc for System {
     }
 }
 
+#[cfg(target_os = "freertos")]
+unsafe fn aligned_malloc(layout: &Layout) -> *mut u8 {
+    libc::malloc(layout.size()) as *mut u8
+}
+
 #[cfg(any(
     target_os = "android",
-    target_os = "freertos",
     target_os = "illumos",
     target_os = "redox",
     target_os = "solaris"
