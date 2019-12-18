@@ -8,48 +8,6 @@ pub type QueueHandle_t = *mut libc::c_void;
 pub type SemaphoreHandle_t = QueueHandle_t;
 pub type TaskFunction_t = extern "C" fn(*mut libc::c_void) -> *mut libc::c_void;
 
-#[repr(C)]
-pub struct portMUX_TYPE {
-    pub owner: u32,
-    pub count: u32,
-    pub lastLockedFn: *mut libc::c_char,
-    pub lastLockedLine: libc::c_int,
-}
-
-#[repr(C)]
-pub struct StaticMiniListItem_t {
-    pub xDummy1: TickType_t,
-    pub pvDummy2: [*mut libc::c_void; 2],
-}
-
-#[repr(C)]
-pub struct StaticList_t {
-    pub uxDummy1: UBaseType_t,
-    pub pvDummy2: *mut libc::c_void,
-    pub xDummy3: StaticMiniListItem_t,
-}
-
-#[repr(C)]
-pub struct StaticQueue_t {
-    pub pvDummy1: [*mut libc::c_void; 3],
-    pub u: Union1,
-    pub xDummy3: [StaticList_t; 2],
-    pub uxDummy4: UBaseType_t,
-    pub uxDummy6: u8,
-    pub pvDummy7: *mut libc::c_void,
-    pub uxDummy8: UBaseType_t,
-    pub ucDummy9: u8,
-    pub muxDummy: portMUX_TYPE,
-}
-
-#[repr(C)]
-pub union Union1 {
-    pub pvDummy2: *mut libc::c_void,
-    pub uxDummy2: UBaseType_t,
-}
-
-pub type StaticSemaphore_t = StaticQueue_t;
-
 pub const queueQUEUE_TYPE_MUTEX: u8 = 1;
 pub const queueQUEUE_TYPE_RECURSIVE_MUTEX: u8 = 4;
 pub const pdFALSE: BaseType_t = 0;
@@ -74,7 +32,6 @@ extern "C" {
   pub fn xQueueGenericSend(xQueue: QueueHandle_t, pvItemToQueue: *const libc::c_void, xTicksToWait: TickType_t, xCopyPosition: BaseType_t) -> BaseType_t;
   #[link_name = "vQueueDelete"]
   pub fn vSemaphoreDelete(sem: SemaphoreHandle_t);
-  pub fn xQueueCreateMutexStatic(ucQueueType: u8, pxStaticQueue: *mut StaticQueue_t) -> QueueHandle_t;
   #[link_name = "xQueueCreateCountingSemaphore"]
   pub fn xSemaphoreCreateCounting(max: UBaseType_t, initial: UBaseType_t) -> SemaphoreHandle_t;
   pub fn xPortGetTickRateHz() -> u32;
@@ -88,11 +45,6 @@ extern "C" {
       pxCreatedTask: *mut TaskHandle_t,
       xCoreID: BaseType_t,
   ) -> BaseType_t;
-}
-
-#[inline]
-pub unsafe fn xSemaphoreCreateMutexStatic(pxStaticQueue: *mut StaticSemaphore_t) -> SemaphoreHandle_t {
-    xQueueCreateMutexStatic(queueQUEUE_TYPE_MUTEX, pxStaticQueue)
 }
 
 #[inline]

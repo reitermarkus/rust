@@ -23,10 +23,7 @@
 #![allow(missing_debug_implementations)]
 
 cfg_if::cfg_if! {
-    if #[cfg(target_os = "freertos")] {
-        mod freertos;
-        pub use self::freertos::*;
-    } else if #[cfg(target_os = "vxworks")] {
+    if #[cfg(target_os = "vxworks")] {
         mod vxworks;
         pub use self::vxworks::*;
     } else if #[cfg(unix)] {

@@ -4,7 +4,6 @@ use crate::ptr;
 use crate::sys;
 use crate::sys::cvt;
 use crate::sys::process::process_common::*;
-use crate::sys::{self, unsupported};
 
 use libc::{c_int, gid_t, pid_t, uid_t};
 
@@ -13,6 +12,16 @@ use libc::{c_int, gid_t, pid_t, uid_t};
 ////////////////////////////////////////////////////////////////////////////////
 
 impl Command {
+    #[cfg(target_os = "freertos")]
+    pub fn spawn(
+        &mut self,
+        default: Stdio,
+        needs_stdin: bool,
+    ) -> io::Result<(Process, StdioPipes)> {
+        crate::sys::unsupported()
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn spawn(
         &mut self,
         default: Stdio,
@@ -173,7 +182,7 @@ impl Command {
         stdio: ChildPipes,
         maybe_envp: Option<&CStringArray>
     ) -> Result<!, io::Error> {
-        unsupported()
+        crate::sys::unsupported()
     }
 
     #[cfg(not(target_os = "freertos"))]
@@ -442,10 +451,7 @@ impl Process {
 
     #[cfg(target_os = "freertos")]
     pub fn wait(&mut self) -> io::Result<ExitStatus> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ))
+        crate::sys::unsupported()
     }
 
     #[cfg(not(target_os = "freertos"))]
@@ -462,10 +468,7 @@ impl Process {
 
     #[cfg(target_os = "freertos")]
     pub fn try_wait(&mut self) -> io::Result<Option<ExitStatus>> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ))
+        crate::sys::unsupported()
     }
 
     #[cfg(not(target_os = "freertos"))]

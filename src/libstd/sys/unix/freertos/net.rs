@@ -144,10 +144,7 @@ impl Socket {
     }
 
     pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ))
+        crate::sys::unsupported()
     }
 
     pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
@@ -253,10 +250,7 @@ impl Socket {
     }
 
     pub fn duplicate(&self) -> io::Result<Socket> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ))
+        crate::sys::unsupported()
     }
 
     fn recv_with_flags(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {

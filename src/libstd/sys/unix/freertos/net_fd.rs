@@ -69,7 +69,7 @@ impl NetFileDesc {
 
     pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            libc::write(self.fd,
+            netc::write(self.fd,
                         buf.as_ptr() as *const c_void,
                         cmp::min(buf.len(), max_len()))
         })?;
@@ -78,50 +78,11 @@ impl NetFileDesc {
 
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            libc::writev(self.fd,
+            netc::writev(self.fd,
                          bufs.as_ptr() as *const libc::iovec,
                          cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
         })?;
         Ok(ret as usize)
-    }
-
-    pub fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
-        #[cfg(target_os = "android")]
-        use super::android::cvt_pwrite64;
-
-        #[cfg(target_os = "emscripten")]
-        unsafe fn cvt_pwrite64(fd: c_int, buf: *const c_void, count: usize, offset: i64)
-            -> io::Result<isize>
-        {
-            use crate::convert::TryInto;
-            use libc::pwrite64;
-            // pwrite64 on emscripten actually takes a 32 bit offset
-            if let Ok(o) = offset.try_into() {
-                cvt(pwrite64(fd, buf, count, o))
-            } else {
-                Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                   "cannot pwrite >2GB"))
-            }
-        }
-
-        #[cfg(not(any(target_os = "android", target_os = "emscripten")))]
-        unsafe fn cvt_pwrite64(fd: c_int, buf: *const c_void, count: usize, offset: i64)
-            -> io::Result<isize>
-        {
-            #[cfg(target_os = "linux")]
-            use libc::pwrite64;
-            #[cfg(not(target_os = "linux"))]
-            use libc::pwrite as pwrite64;
-            cvt(pwrite64(fd, buf, count, offset))
-        }
-
-        unsafe {
-            cvt_pwrite64(self.fd,
-                         buf.as_ptr() as *const c_void,
-                         cmp::min(buf.len(), max_len()),
-                         offset as i64)
-                .map(|n| n as usize)
-        }
     }
 
     #[cfg(target_os = "linux")]

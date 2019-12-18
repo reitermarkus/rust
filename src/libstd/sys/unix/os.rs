@@ -119,10 +119,7 @@ pub fn error_string(errno: i32) -> String {
 
 #[cfg(target_os = "freertos")]
 pub fn getcwd() -> io::Result<PathBuf> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]
@@ -154,10 +151,7 @@ pub fn getcwd() -> io::Result<PathBuf> {
 
 #[cfg(target_os = "freertos")]
 pub fn chdir(p: &path::Path) -> io::Result<()> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]

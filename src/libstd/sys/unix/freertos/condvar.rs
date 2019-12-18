@@ -3,7 +3,7 @@ use crate::sys::mutex::{self, Mutex, ReentrantMutex};
 use crate::time::Duration;
 use crate::collections::VecDeque;
 
-use super::freertos::*;
+use crate::sys::ffi::*;
 
 pub struct Condvar {
   lock: ReentrantMutex,
