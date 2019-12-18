@@ -96,24 +96,23 @@ impl Thread {
     }
 
     pub fn sleep(dur: Duration) {
-        let mut secs = dur.as_secs();
-        let mut nsecs = dur.subsec_nanos() as _;
+        let secs = dur.as_secs();
+        let nanos = dur.subsec_nanos();
 
-        // If we're awoken with a signal then the return value will be -1 and
-        // nanosleep will fill in `ts` with the remaining time.
+        let mut remaining_ms = u128::from(secs) * 1_000 + (u128::from(nanos) + 999999) / 1000000;
+
         unsafe {
-            while secs > 0 || nsecs > 0 {
-                let mut ts = libc::timespec {
-                    tv_sec: cmp::min(libc::time_t::max_value() as u64, secs) as libc::time_t,
-                    tv_nsec: nsecs,
-                };
-                secs -= ts.tv_sec as u64;
-                if libc::nanosleep(&ts, &mut ts) == -1 {
-                    assert_eq!(os::errno(), libc::EINTR);
-                    secs += ts.tv_sec as u64;
-                    nsecs = ts.tv_nsec;
+            let ms_per_tick = u128::from(1000 / xPortGetTickRateHz());
+
+            while remaining_ms > 0 {
+                let ticks_to_delay = (remaining_ms + ms_per_tick - 1) / ms_per_tick;
+
+                if ticks_to_delay > u128::from(crate::u32::MAX) {
+                    remaining_ms -= ms_per_tick * u128::from(crate::u32::MAX);
+                    vTaskDelay(crate::u32::MAX);
                 } else {
-                    nsecs = 0;
+                    remaining_ms = 0;
+                    vTaskDelay(ticks_to_delay as u32);
                 }
             }
         }
