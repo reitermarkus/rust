@@ -46,6 +46,7 @@ pub mod alloc;
 pub mod android;
 pub mod args;
 pub mod cmath;
+#[cfg_attr(target_os = "freertos", path = "freertos/condvar.rs")]
 pub mod condvar;
 pub mod env;
 pub mod ext;
@@ -56,6 +57,7 @@ pub mod io;
 #[cfg(target_os = "l4re")]
 mod l4re;
 pub mod memchr;
+#[cfg_attr(target_os = "freertos", path = "freertos/mutex.rs")]
 pub mod mutex;
 #[cfg(not(target_os = "l4re"))]
 pub mod net;
@@ -66,12 +68,19 @@ pub mod path;
 pub mod pipe;
 pub mod process;
 pub mod rand;
+#[cfg_attr(target_os = "freertos", path = "../wasm/rwlock_atomics.rs")]
 pub mod rwlock;
 pub mod stack_overflow;
 pub mod stdio;
+#[cfg_attr(target_os = "freertos", path = "freertos/thread.rs")]
 pub mod thread;
+#[cfg_attr(target_os = "freertos", path = "freertos/thread_local.rs")]
 pub mod thread_local;
 pub mod time;
+
+#[cfg(target_os = "freertos")]
+#[path = "freertos/ffi.rs"]
+pub mod ffi;
 
 pub use crate::sys_common::os_str_bytes as os_str;
 
@@ -94,6 +103,17 @@ pub fn init() {
     }
     #[cfg(any(target_os = "emscripten", target_os = "fuchsia", target_os = "freertos"))]
     unsafe fn reset_sigpipe() {}
+}
+
+/// This function is used to implement functionality that simply doesn't exist.
+/// Programs relying on this functionality will need to deal with the error.
+#[allow(unused)]
+pub fn unsupported<T>() -> crate::io::Result<T> {
+    Err(unsupported_err())
+}
+
+pub fn unsupported_err() -> crate::io::Error {
+    crate::io::Error::new(ErrorKind::Other, "operation not supported")
 }
 
 #[cfg(target_os = "android")]

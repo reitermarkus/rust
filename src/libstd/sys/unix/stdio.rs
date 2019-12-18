@@ -2,6 +2,23 @@ use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem::ManuallyDrop;
 use crate::sys::fd::FileDesc;
 
+#[cfg(target_arch = "xtensa")]
+mod xtensa {
+    use super::*;
+
+    extern "C" {
+        fn ets_write_char_uart(c: libc::c_char);
+    }
+
+    pub fn write(buf: &[u8]) -> io::Result<usize> {
+        for &b in buf.iter() {
+            unsafe { ets_write_char_uart(b as libc::c_char) }
+        }
+
+        Ok(buf.len())
+    }
+}
+
 pub struct Stdin(());
 pub struct Stdout(());
 pub struct Stderr(());
@@ -34,10 +51,17 @@ impl Stdout {
 }
 
 impl io::Write for Stdout {
+    #[cfg(target_arch = "xtensa")]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        xtensa::write(buf)
+    }
+
+    #[cfg(not(target_arch = "xtensa"))]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDOUT_FILENO)).write(buf)
     }
 
+    #[cfg(not(target_arch = "xtensa"))]
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDOUT_FILENO)).write_vectored(bufs)
     }
@@ -59,10 +83,17 @@ impl Stderr {
 }
 
 impl io::Write for Stderr {
+    #[cfg(target_arch = "xtensa")]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        xtensa::write(buf)
+    }
+
+    #[cfg(not(target_arch = "xtensa"))]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDERR_FILENO)).write(buf)
     }
 
+    #[cfg(not(target_arch = "xtensa"))]
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDERR_FILENO)).write_vectored(bufs)
     }

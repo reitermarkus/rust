@@ -9,7 +9,7 @@ use crate::time::Duration;
 use crate::sync::{Arc, atomic::{AtomicUsize, Ordering::SeqCst}};
 use crate::sys_common::thread::*;
 
-use super::freertos::*;
+use crate::sys::ffi::*;
 
 const RUNNING: usize = 0;
 const DETACHED: usize = 1;

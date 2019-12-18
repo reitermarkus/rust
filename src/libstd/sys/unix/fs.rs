@@ -724,10 +724,7 @@ impl File {
 
     #[cfg(target_os = "freertos")]
     pub fn open_c(path: &CStr, opts: &OpenOptions) -> io::Result<File> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ))
+        crate::sys::unsupported()
     }
 
     #[cfg(not(target_os = "freertos"))]
@@ -849,10 +846,7 @@ impl File {
         return crate::sys::android::ftruncate64(self.0.raw(), size);
 
         #[cfg(target_os = "freertos")]
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ));
+        return crate::sys::unsupported();
 
         #[cfg(not(any(target_os = "android", target_os = "freertos")))]
         {
@@ -927,10 +921,7 @@ impl File {
 
     #[cfg(target_os = "freertos")]
     pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "This function is not supported on FreeRTOS.",
-        ))
+        crate::sys::unsupported()
     }
 
     #[cfg(not(target_os = "freertos"))]
@@ -1061,10 +1052,7 @@ pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
 
 #[cfg(target_os = "freertos")]
 pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]
@@ -1082,10 +1070,7 @@ pub fn rmdir(p: &Path) -> io::Result<()> {
 
 #[cfg(target_os = "freertos")]
 pub fn readlink(p: &Path) -> io::Result<PathBuf> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]
@@ -1118,10 +1103,7 @@ pub fn readlink(p: &Path) -> io::Result<PathBuf> {
 
 #[cfg(target_os = "freertos")]
 pub fn symlink(src: &Path, dst: &Path) -> io::Result<()> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]
@@ -1160,10 +1142,7 @@ pub fn stat(p: &Path) -> io::Result<FileAttr> {
 
 #[cfg(target_os = "freertos")]
 pub fn lstat(p: &Path) -> io::Result<FileAttr> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]
@@ -1188,10 +1167,7 @@ pub fn lstat(p: &Path) -> io::Result<FileAttr> {
 
 #[cfg(target_os = "freertos")]
 pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
-        "This function is not supported on FreeRTOS.",
-    ))
+    crate::sys::unsupported()
 }
 
 #[cfg(not(target_os = "freertos"))]

@@ -3,7 +3,7 @@ use crate::mem::MaybeUninit;
 use crate::ptr;
 use crate::sync::atomic::{AtomicU8, Ordering::SeqCst};
 
-use super::freertos::*;
+use crate::sys::ffi::*;
 
 pub struct Mutex { inner: UnsafeCell<SemaphoreHandle_t>, initialized: AtomicU8 }
 
