@@ -1,13 +1,13 @@
 use crate::cell::UnsafeCell;
+use crate::collections::VecDeque;
 use crate::sys::mutex::{self, Mutex, ReentrantMutex};
 use crate::time::Duration;
-use crate::collections::VecDeque;
 
 use crate::sys::ffi::*;
 
 pub struct Condvar {
-  lock: ReentrantMutex,
-  waiter_list: UnsafeCell<Option<VecDeque<SemaphoreHandle_t>>>,
+    lock: ReentrantMutex,
+    waiter_list: UnsafeCell<Option<VecDeque<SemaphoreHandle_t>>>,
 }
 
 unsafe impl Send for Condvar {}
@@ -18,8 +18,8 @@ impl Condvar {
         // Might be moved and address is changing it is better to avoid
         // initialization of potentially opaque OS data before it landed
         Condvar {
-          lock: unsafe { ReentrantMutex::uninitialized() },
-          waiter_list: UnsafeCell::new(None),
+            lock: unsafe { ReentrantMutex::uninitialized() },
+            waiter_list: UnsafeCell::new(None),
         }
     }
 
@@ -135,4 +135,4 @@ impl Condvar {
 
         self.lock.unlock();
     }
-  }
+}
