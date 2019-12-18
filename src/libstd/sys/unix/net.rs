@@ -4,7 +4,7 @@ use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::net::{Shutdown, SocketAddr};
 use crate::str;
-use crate::sys::fd::FileDesc;
+use crate::sys::net_fd::FileDesc;
 use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 use crate::time::{Duration, Instant};
@@ -26,6 +26,10 @@ pub mod netc {
         };
 
         extern "C" {
+            #[link_name = "lwip_fcntl"]
+            pub fn fcntl(s: c_int, cmd: c_int, val: c_int) -> c_int;
+            #[link_name = "lwip_close"]
+            pub fn close(s: c_int) -> ssize_t;
             #[link_name = "lwip_read"]
             pub fn read(s: c_int, mem: *mut c_void, len: size_t) -> ssize_t;
             #[link_name = "lwip_readv"]
@@ -80,7 +84,7 @@ pub mod netc {
 
 pub type wrlen_t = size_t;
 
-pub struct Socket(FileDesc);
+pub struct Socket(NetFileDesc);
 
 pub fn init() {}
 
@@ -128,14 +132,14 @@ impl Socket {
             #[cfg(target_os = "linux")]
             {
                 match cvt(netc::socket(fam, ty | netc::SOCK_CLOEXEC, 0)) {
-                    Ok(fd) => return Ok(Socket(FileDesc::new(fd))),
+                    Ok(fd) => return Ok(Socket(NetFileDesc::new(fd))),
                     Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
                     Err(e) => return Err(e),
                 }
             }
 
             let fd = cvt(netc::socket(fam, ty, 0))?;
-            let fd = FileDesc::new(fd);
+            let fd = NetFileDesc::new(fd);
 
             // Setting CLOEXEC is not supported on FreeRTOS since
             // there is no file system.
@@ -168,24 +172,19 @@ impl Socket {
             {
                 match cvt(netc::socketpair(fam, ty | netc::SOCK_CLOEXEC, 0, fds.as_mut_ptr())) {
                     Ok(_) => {
-                        return Ok((Socket(FileDesc::new(fds[0])), Socket(FileDesc::new(fds[1]))));
+                        return Ok((Socket(NetFileDesc::new(fds[0])), Socket(NetFileDesc::new(fds[1]))));
                     }
                     Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
                     Err(e) => return Err(e),
                 }
             }
 
-            cvt(libc::socketpair(fam, ty, 0, fds.as_mut_ptr()))?;
-            let a = FileDesc::new(fds[0]);
-            let b = FileDesc::new(fds[1]);
+            cvt(netc::socketpair(fam, ty, 0, fds.as_mut_ptr()))?;
+            let a = NetFileDesc::new(fds[0]);
+            let b = NetFileDesc::new(fds[1]);
 
-            // Setting CLOEXEC is not supported on FreeRTOS since
-            // there is no file system.
-            #[cfg(not(target_os = "freertos"))]
-            {
-                a.set_cloexec()?;
-                b.set_cloexec()?;
-            }
+            a.set_cloexec()?;
+            b.set_cloexec()?;
 
             Ok((Socket(a), Socket(b)))
         }
@@ -275,14 +274,14 @@ impl Socket {
             }
             let res = cvt_r(|| unsafe { accept4(self.0.raw(), storage, len, netc::SOCK_CLOEXEC) });
             match res {
-                Ok(fd) => return Ok(Socket(FileDesc::new(fd))),
+                Ok(fd) => return Ok(Socket(NetFileDesc::new(fd))),
                 Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
                 Err(e) => return Err(e),
             }
         }
 
         let fd = cvt_r(|| unsafe { netc::accept(self.0.raw(), storage, len) })?;
-        let fd = FileDesc::new(fd);
+        let fd = NetFileDesc::new(fd);
 
         // Setting CLOEXEC is not supported on FreeRTOS since
         // there is no file system.
@@ -312,12 +311,7 @@ impl Socket {
     }
 
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        let ret = cvt(unsafe {
-            netc::readv(self.0.raw(),
-                        bufs.as_ptr() as *const libc::iovec,
-                        cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
-        })?;
-        Ok(ret as usize)
+        self.0.read_vectored(bufs)
     }
 
     #[inline]
@@ -359,12 +353,7 @@ impl Socket {
     }
 
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        let ret = cvt(unsafe {
-            netc::writev(self.0.raw(),
-                         bufs.as_ptr() as *const libc::iovec,
-                         cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
-        })?;
-        Ok(ret as usize)
+        self.0.write_vectored(bufs)
     }
 
     #[inline]

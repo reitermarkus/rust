@@ -1,6 +1,6 @@
 use crate::cell::UnsafeCell;
 use crate::collections::VecDeque;
-use crate::sys::mutex::{self, Mutex, ReentrantMutex};
+use crate::sys::mutex::{Mutex, ReentrantMutex};
 use crate::time::Duration;
 
 use crate::sys::ffi::*;
@@ -71,7 +71,6 @@ impl Condvar {
     }
 
     unsafe fn wait_timeout_option(&self, mutex: &Mutex, dur: Option<Duration>) -> bool {
-        use crate::ptr;
         use crate::time::Instant;
 
         let (now, timeout_ticks) = if let Some(dur) = dur {
@@ -88,7 +87,7 @@ impl Condvar {
         self.lock.lock();
 
         self.init_waiter_list();
-        let mut waiter_list = (&mut *self.waiter_list.get()).as_mut().unwrap();
+        let waiter_list = (&mut *self.waiter_list.get()).as_mut().unwrap();
         waiter_list.push_back(waiter);
 
         self.lock.unlock();
@@ -103,7 +102,7 @@ impl Condvar {
 
         self.lock.lock();
 
-        let mut waiter_list = (&mut *self.waiter_list.get()).as_mut().unwrap();
+        let waiter_list = (&mut *self.waiter_list.get()).as_mut().unwrap();
         let deleted_waiter = if let Some(index) = waiter_list.iter().position(|&w| w == waiter) {
             waiter_list.remove(index)
         } else {

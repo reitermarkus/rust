@@ -33,7 +33,7 @@ impl Thread {
     pub unsafe fn new(stack: usize, p: Box<dyn FnOnce()>)
                           -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
-        let state = Arc::new(AtomicUsize::new(0));
+        let state = Arc::new(AtomicUsize::new(RUNNING));
 
         let arg = box (join_mutex.clone(), state.clone(), box p);
 

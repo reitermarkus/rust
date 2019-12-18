@@ -12,7 +12,6 @@ pub const queueQUEUE_TYPE_MUTEX: u8 = 1;
 pub const queueQUEUE_TYPE_RECURSIVE_MUTEX: u8 = 4;
 pub const pdFALSE: BaseType_t = 0;
 pub const pdTRUE: BaseType_t = 1;
-pub const xBlockTime: TickType_t = 0;
 pub const semGIVE_BLOCK_TIME: TickType_t = 0;
 pub const queueSEND_TO_BACK: BaseType_t = 0;
 pub const tskNO_AFFINITY: BaseType_t = BaseType_t::max_value();
