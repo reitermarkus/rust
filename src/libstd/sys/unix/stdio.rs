@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem::ManuallyDrop;
 use crate::sys::fd::FileDesc;

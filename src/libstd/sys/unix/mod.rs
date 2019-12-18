@@ -63,6 +63,7 @@ pub mod mutex;
 pub mod net;
 #[cfg(target_os = "l4re")]
 pub use self::l4re::net;
+pub mod net_fd;
 pub mod os;
 pub mod path;
 pub mod pipe;
@@ -145,6 +146,11 @@ pub fn decode_error_kind(errno: i32) -> ErrorKind {
         _ => ErrorKind::Other,
     }
 }
+
+// This enum is used as the storage for a bunch of types which can't actually
+// exist.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+pub enum Void {}
 
 #[doc(hidden)]
 pub trait IsMinusOne {

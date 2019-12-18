@@ -1,5 +1,4 @@
 use crate::cell::UnsafeCell;
-use crate::mem::MaybeUninit;
 use crate::ptr;
 use crate::sync::atomic::{AtomicU8, Ordering::SeqCst};
 
