@@ -466,8 +466,11 @@ impl Builder {
         let their_packet = my_packet.clone();
 
         let main = move || {
-            if let Some(name) = their_thread.cname() {
-                imp::Thread::set_name(name);
+            #[cfg(not(target_os = "freertos"))]
+            {
+                if let Some(name) = their_thread.cname() {
+                    imp::Thread::set_name(name);
+                }
             }
 
             thread_info::set(imp::guard::current(), their_thread);
@@ -490,6 +493,8 @@ impl Builder {
             // exist after the thread has terminated, which is signaled by `Thread::join`
             // returning.
             native: Some(imp::Thread::new(
+                #[cfg(target_os = "freertos")]
+                my_thread.cname().map(|s| s.to_owned()),
                 stack_size,
                 mem::transmute::<Box<dyn FnOnce() + 'a>, Box<dyn FnOnce() + 'static>>(Box::new(
                     main,

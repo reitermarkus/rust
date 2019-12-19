@@ -1,13 +1,13 @@
 use crate::cmp;
-use crate::ffi::CStr;
+use crate::ffi::CString;
 use crate::io;
 use crate::mem;
 use crate::ptr;
-use crate::sys::os;
 use crate::sys::mutex::Mutex;
 use crate::time::Duration;
 use crate::sync::{Arc, atomic::{AtomicUsize, Ordering::SeqCst}};
 use crate::sys_common::thread::*;
+use crate::pin::Pin;
 
 use crate::sys::ffi::*;
 
@@ -18,6 +18,7 @@ const EXITED: usize = 2;
 pub const DEFAULT_MIN_STACK_SIZE: usize = 1024;
 
 pub struct Thread {
+    name: Pin<Box<CString>>,
     id: TaskHandle_t,
     join_mutex: Arc<Mutex>,
     state: Arc<AtomicUsize>,
@@ -30,21 +31,24 @@ unsafe impl Sync for Thread {}
 
 impl Thread {
     // unsafe: see thread::Builder::spawn_unchecked for safety requirements
-    pub unsafe fn new(stack: usize, p: Box<dyn FnOnce()>)
+    pub unsafe fn new(name: Option<CString>, stack: usize, p: Box<dyn FnOnce()>)
                           -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
         let state = Arc::new(AtomicUsize::new(RUNNING));
 
         let arg = box (join_mutex.clone(), state.clone(), box p);
 
-        let mut handle: TaskHandle_t = ptr::null_mut();
+        let name = Box::pin(name.unwrap_or_else(|| CString::from_vec_unchecked(b"rust_thread".to_vec())));
+
+        let mut thread = Thread { name, id: ptr::null_mut(), join_mutex, state };
+
         let res = xTaskCreatePinnedToCore(
             thread_start,
-            b"rust_thread\0".as_ptr() as *const libc::c_char,
+            thread.name.as_ptr(),
             stack as u32,
             Box::into_raw(arg) as *mut libc::c_void,
             5,
-            &mut handle,
+            &mut thread.id,
             tskNO_AFFINITY,
         );
 
@@ -56,7 +60,7 @@ impl Thread {
             }
         }
 
-        return Ok(Thread { id: handle, join_mutex, state });
+        return Ok(thread);
 
         extern fn thread_start(arg: *mut libc::c_void) -> *mut libc::c_void {
             unsafe {
@@ -89,10 +93,6 @@ impl Thread {
 
     pub fn yield_now() {
         unsafe { vTaskDelay(0) };
-    }
-
-    pub fn set_name(_name: &CStr) {
-        // FIXME: Name can be passed to `Thread::new` instead.
     }
 
     pub fn sleep(dur: Duration) {
