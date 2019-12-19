@@ -15,7 +15,7 @@ const RUNNING: usize = 0;
 const DETACHED: usize = 1;
 const EXITED: usize = 2;
 
-pub const DEFAULT_MIN_STACK_SIZE: usize = 1024;
+pub const DEFAULT_MIN_STACK_SIZE: usize = 4096;
 
 pub struct Thread {
     name: Pin<Box<CString>>,
