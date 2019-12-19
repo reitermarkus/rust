@@ -556,6 +556,7 @@ pub fn unsetenv(n: &OsStr) -> io::Result<()> {
     }
 }
 
+#[cfg(not(target_os = "freertos"))]
 pub fn page_size() -> usize {
     unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize }
 }
