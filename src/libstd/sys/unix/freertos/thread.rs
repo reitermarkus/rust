@@ -24,8 +24,6 @@ pub struct Thread {
     state: Arc<AtomicUsize>,
 }
 
-// Some platforms may have pthread_t as a pointer in which case we still want
-// a thread to be Send/Sync
 unsafe impl Send for Thread {}
 unsafe impl Sync for Thread {}
 
