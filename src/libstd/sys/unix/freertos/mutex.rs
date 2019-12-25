@@ -1,18 +1,26 @@
 use crate::cell::UnsafeCell;
 use crate::ptr;
-use crate::sync::atomic::{AtomicU8, Ordering::SeqCst};
+use crate::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::sys::ffi::*;
 
-pub struct Mutex { inner: UnsafeCell<SemaphoreHandle_t>, initialized: AtomicU8 }
+pub struct Mutex {
+    inner: UnsafeCell<SemaphoreHandle_t>,
+    initialized: AtomicUsize,
+}
 
 unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
 
+const UNINITIALIZING: usize = 3;
+const UNINITIALIZED: usize = 2;
+const INITIALIZING: usize = 1;
+const INITIALIZED: usize = 0;
+
 #[allow(dead_code)] // sys isn't exported yet
 impl Mutex {
     pub const fn new() -> Mutex {
-        Mutex { inner: UnsafeCell::new(ptr::null_mut()), initialized: AtomicU8::new(2) }
+        Mutex { inner: UnsafeCell::new(ptr::null_mut()), initialized: AtomicUsize::new(UNINITIALIZED) }
     }
 
     #[inline]
@@ -22,16 +30,17 @@ impl Mutex {
 
     #[inline]
     unsafe fn atomic_init(&self) {
-        match self.initialized.compare_and_swap(2, 1, SeqCst) {
-            2 => {
-                *self.inner.get() = xSemaphoreCreateMutex();
-                debug_assert!(!(*self.inner.get()).is_null());
-                self.initialized.store(0, SeqCst);
-            },
-            1 => {
-                while !self.initialized.load(SeqCst) == 0 {}
-            },
-            _ => return,
+        loop {
+            match self.initialized.compare_and_swap(UNINITIALIZED, INITIALIZING, SeqCst) {
+                UNINITIALIZED => {
+                    *self.inner.get() = xSemaphoreCreateMutex();
+                    debug_assert!(!(*self.inner.get()).is_null());
+                    self.initialized.store(INITIALIZED, SeqCst);
+                    return;
+                }
+                INITIALIZED => return,
+                _ => continue,
+            }
         }
     }
 
@@ -52,15 +61,22 @@ impl Mutex {
     #[inline]
     pub unsafe fn try_lock(&self) -> bool {
         self.atomic_init();
-        xSemaphoreTake(*self.inner.get(), 0) == 1
+        xSemaphoreTake(*self.inner.get(), 0) == pdTRUE
     }
 
     #[inline]
     pub unsafe fn destroy(&self) {
-        if self.initialized.load(SeqCst) == 0 {
-            vSemaphoreDelete(*self.inner.get());
-            *self.inner.get() = ptr::null_mut();
-            self.initialized.store(2, SeqCst);
+        loop {
+            match self.initialized.compare_and_swap(INITIALIZED, UNINITIALIZING, SeqCst) {
+                INITIALIZED => {
+                    vSemaphoreDelete(*self.inner.get());
+                    *self.inner.get() = ptr::null_mut();
+                    self.initialized.store(UNINITIALIZED, SeqCst);
+                    return;
+                }
+                UNINITIALIZED => return,
+                _ => continue,
+            }
         }
     }
 }
@@ -71,14 +87,20 @@ impl Drop for Mutex {
     }
 }
 
-pub struct ReentrantMutex { inner: UnsafeCell<SemaphoreHandle_t>, initialized: AtomicU8 }
+pub struct ReentrantMutex {
+    inner: UnsafeCell<SemaphoreHandle_t>,
+    initialized: AtomicUsize,
+}
 
 unsafe impl Send for ReentrantMutex {}
 unsafe impl Sync for ReentrantMutex {}
 
 impl ReentrantMutex {
     pub const unsafe fn uninitialized() -> ReentrantMutex {
-        ReentrantMutex { inner: UnsafeCell::new(ptr::null_mut()), initialized: AtomicU8::new(2) }
+        ReentrantMutex {
+            inner: UnsafeCell::new(ptr::null_mut()),
+            initialized: AtomicUsize::new(UNINITIALIZED),
+        }
     }
 
     #[inline]
@@ -88,16 +110,17 @@ impl ReentrantMutex {
 
     #[inline]
     unsafe fn atomic_init(&self) {
-        match self.initialized.compare_and_swap(2, 1, SeqCst) {
-            2 => {
-                *self.inner.get() = xSemaphoreCreateRecursiveMutex();
-                debug_assert!(!(*self.inner.get()).is_null());
-                self.initialized.store(0, SeqCst);
-            },
-            1 => {
-                while !self.initialized.load(SeqCst) == 0 {}
-            },
-            _ => return,
+        loop {
+            match self.initialized.compare_and_swap(UNINITIALIZED, INITIALIZING, SeqCst) {
+                UNINITIALIZED => {
+                    *self.inner.get() = xSemaphoreCreateRecursiveMutex();
+                    debug_assert!(!(*self.inner.get()).is_null());
+                    self.initialized.store(INITIALIZED, SeqCst);
+                    return;
+                }
+                INITIALIZED => return,
+                _ => continue,
+            }
         }
     }
 
@@ -111,7 +134,7 @@ impl ReentrantMutex {
     #[inline]
     pub unsafe fn try_lock(&self) -> bool {
         self.atomic_init();
-        xSemaphoreTakeRecursive(*self.inner.get(), 0) == 1
+        xSemaphoreTakeRecursive(*self.inner.get(), 0) == pdTRUE
     }
 
     pub unsafe fn unlock(&self) {
@@ -121,10 +144,17 @@ impl ReentrantMutex {
     }
 
     pub unsafe fn destroy(&self) {
-        if self.initialized.load(SeqCst) == 0 {
-            vSemaphoreDelete(*self.inner.get());
-            *self.inner.get() = ptr::null_mut();
-            self.initialized.store(2, SeqCst);
+        loop {
+            match self.initialized.compare_and_swap(INITIALIZED, UNINITIALIZING, SeqCst) {
+                INITIALIZED => {
+                    vSemaphoreDelete(*self.inner.get());
+                    *self.inner.get() = ptr::null_mut();
+                    self.initialized.store(UNINITIALIZED, SeqCst);
+                    return;
+                }
+                UNINITIALIZED => return,
+                _ => continue,
+            }
         }
     }
 }
