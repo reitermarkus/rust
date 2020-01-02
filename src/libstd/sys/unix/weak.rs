@@ -16,7 +16,6 @@
 //! symbol, but that caused Debian to detect an unnecessarily strict versioned
 //! dependency on libc6 (#23628).
 
-use crate::ffi::CStr;
 use crate::marker;
 use crate::mem;
 use crate::sync::atomic::{AtomicUsize, Ordering};
@@ -53,7 +52,15 @@ impl<F> Weak<F> {
     }
 }
 
+#[cfg(target_os = "freertos")]
+unsafe fn fetch(_name: &str) -> usize {
+    0
+}
+
+#[cfg(not(target_os = "freertos"))]
 unsafe fn fetch(name: &str) -> usize {
+    use crate::ffi::CStr;
+
     let name = match CStr::from_bytes_with_nul(name.as_bytes()) {
         Ok(cstr) => cstr,
         Err(..) => return 0,

@@ -4,7 +4,7 @@ use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::net::{Shutdown, SocketAddr};
 use crate::str;
-use crate::sys::net_fd::FileDesc;
+use crate::sys::net_fd::NetFileDesc;
 use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 use crate::time::{Duration, Instant};
@@ -18,7 +18,7 @@ pub mod netc {
     mod lwip {
         pub use libc::{
             c_int, c_void, c_char, c_long, c_ulong, size_t, ssize_t, AF_INET, AF_INET6, sa_family_t, in_addr, sockaddr_in, in6_addr,
-            sockaddr_in6, sockaddr, socklen_t, IPPROTO_IP, IPV6_JOIN_GROUP, IPPROTO_IPV6, IP_TTL,
+            sockaddr_in6, sockaddr, socklen_t, FIONBIO, IPPROTO_IP, IPV6_JOIN_GROUP, IPPROTO_IPV6, IP_TTL,
             ipv6_mreq, ip_mreq, IP_ADD_MEMBERSHIP, IPV6_MULTICAST_LOOP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP,
             IP_MULTICAST_TTL, SO_BROADCAST, SOL_SOCKET, SO_SNDTIMEO, SO_RCVTIMEO, SOCK_DGRAM, sockaddr_storage,
             IPV6_V6ONLY, SOCK_STREAM, SO_REUSEADDR, addrinfo, IPV6_LEAVE_GROUP, IPV6_DROP_MEMBERSHIP, IPV6_ADD_MEMBERSHIP,
@@ -158,7 +158,7 @@ impl Socket {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
+    pub fn new_pair(_fam: c_int, _ty: c_int) -> io::Result<(Socket, Socket)> {
         crate::sys::unsupported()
     }
 
@@ -448,7 +448,7 @@ impl AsInner<c_int> for Socket {
 
 impl FromInner<c_int> for Socket {
     fn from_inner(fd: c_int) -> Socket {
-        Socket(FileDesc::new(fd))
+        Socket(NetFileDesc::new(fd))
     }
 }
 

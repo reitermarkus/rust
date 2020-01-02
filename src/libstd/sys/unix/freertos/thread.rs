@@ -1,4 +1,3 @@
-use crate::cmp;
 use crate::ffi::CString;
 use crate::io;
 use crate::mem;

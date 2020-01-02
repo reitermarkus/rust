@@ -578,6 +578,7 @@ impl DirEntry {
         target_os = "ios",
         target_os = "linux",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "android",
         target_os = "solaris",
         target_os = "illumos",
@@ -621,6 +622,7 @@ impl DirEntry {
         target_os = "android",
         target_os = "linux",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "l4re",
         target_os = "haiku"
     ))]
@@ -723,7 +725,7 @@ impl File {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn open_c(path: &CStr, opts: &OpenOptions) -> io::Result<File> {
+    pub fn open_c(_path: &CStr, _opts: &OpenOptions) -> io::Result<File> {
         crate::sys::unsupported()
     }
 
@@ -790,6 +792,12 @@ impl File {
         Ok(File(fd))
     }
 
+    #[cfg(target_os = "freertos")]
+    pub fn file_attr(&self) -> io::Result<FileAttr> {
+        crate::sys::unsupported()
+    }
+
+    #[cfg(not(target_os = "freertos"))]
     pub fn file_attr(&self) -> io::Result<FileAttr> {
         let fd = self.0.raw();
 
@@ -839,22 +847,23 @@ impl File {
         unsafe fn os_datasync(fd: c_int) -> c_int {
             libc::fsync(fd)
         }
+
+    #[cfg(target_os = "freertos")]
+    pub fn truncate(&self, _size: u64) -> io::Result<()> {
+        crate::sys::unsupported()
     }
 
+    #[cfg(target_os = "android")]
     pub fn truncate(&self, size: u64) -> io::Result<()> {
-        #[cfg(target_os = "android")]
-        return crate::sys::android::ftruncate64(self.0.raw(), size);
+        crate::sys::android::ftruncate64(self.0.raw(), size)
+    }
 
-        #[cfg(target_os = "freertos")]
-        return crate::sys::unsupported();
-
-        #[cfg(not(any(target_os = "android", target_os = "freertos")))]
-        {
-            use crate::convert::TryInto;
-            let size: off64_t =
-                size.try_into().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
-            cvt_r(|| unsafe { ftruncate64(self.0.raw(), size) }).map(drop)
-        }
+    #[cfg(not(any(target_os = "android", target_os = "freertos")))]
+    pub fn truncate(&self, size: u64) -> io::Result<()> {
+        use crate::convert::TryInto;
+        let size: off64_t =
+            size.try_into().map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        cvt_r(|| unsafe { ftruncate64(self.0.raw(), size) }).map(drop)
     }
 
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
@@ -920,7 +929,7 @@ impl File {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
+    pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
         crate::sys::unsupported()
     }
 
@@ -1051,7 +1060,7 @@ pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
 }
 
 #[cfg(target_os = "freertos")]
-pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
+pub fn set_perm(_p: &Path, _perm: FilePermissions) -> io::Result<()> {
     crate::sys::unsupported()
 }
 
@@ -1069,7 +1078,7 @@ pub fn rmdir(p: &Path) -> io::Result<()> {
 }
 
 #[cfg(target_os = "freertos")]
-pub fn readlink(p: &Path) -> io::Result<PathBuf> {
+pub fn readlink(_p: &Path) -> io::Result<PathBuf> {
     crate::sys::unsupported()
 }
 
@@ -1102,7 +1111,7 @@ pub fn readlink(p: &Path) -> io::Result<PathBuf> {
 }
 
 #[cfg(target_os = "freertos")]
-pub fn symlink(src: &Path, dst: &Path) -> io::Result<()> {
+pub fn symlink(_src: &Path, _dst: &Path) -> io::Result<()> {
     crate::sys::unsupported()
 }
 
@@ -1141,7 +1150,7 @@ pub fn stat(p: &Path) -> io::Result<FileAttr> {
 }
 
 #[cfg(target_os = "freertos")]
-pub fn lstat(p: &Path) -> io::Result<FileAttr> {
+pub fn lstat(_p: &Path) -> io::Result<FileAttr> {
     crate::sys::unsupported()
 }
 
@@ -1166,7 +1175,7 @@ pub fn lstat(p: &Path) -> io::Result<FileAttr> {
 }
 
 #[cfg(target_os = "freertos")]
-pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
+pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
     crate::sys::unsupported()
 }
 

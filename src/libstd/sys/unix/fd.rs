@@ -47,7 +47,7 @@ impl FileDesc {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
+    pub fn read(&self, _buf: &mut [u8]) -> io::Result<usize> {
         crate::sys::unsupported()
     }
 
@@ -60,7 +60,7 @@ impl FileDesc {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
+    pub fn read_vectored(&self, _bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         crate::sys::unsupported()
     }
 
@@ -116,7 +116,7 @@ impl FileDesc {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
+    pub fn write(&self, _buf: &[u8]) -> io::Result<usize> {
         crate::sys::unsupported()
     }
 
@@ -129,7 +129,7 @@ impl FileDesc {
     }
 
     #[cfg(target_os = "freertos")]
-    pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+    pub fn write_vectored(&self, _bufs: &[IoSlice<'_>]) -> io::Result<usize> {
          crate::sys::unsupported()
     }
 
