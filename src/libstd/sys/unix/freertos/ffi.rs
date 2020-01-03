@@ -14,7 +14,7 @@ pub const pdFALSE: BaseType_t = 0;
 pub const pdTRUE: BaseType_t = 1;
 pub const semGIVE_BLOCK_TIME: TickType_t = 0;
 pub const queueSEND_TO_BACK: BaseType_t = 0;
-pub const tskNO_AFFINITY: BaseType_t = BaseType_t::max_value();
+const tskNO_AFFINITY: BaseType_t = BaseType_t::max_value();
 pub const errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY: BaseType_t = -1;
 
 extern "C" {
@@ -44,6 +44,16 @@ extern "C" {
     #[link_name = "xQueueCreateCountingSemaphore"]
     pub fn xSemaphoreCreateCounting(max: UBaseType_t, initial: UBaseType_t) -> SemaphoreHandle_t;
     pub fn xPortGetTickRateHz() -> u32;
+    #[cfg(target_device = "esp8266")]
+    pub fn xTaskCreate(
+        pxTaskCode: TaskFunction_t,
+        pcName: *const libc::c_char,
+        usStackDepth: u32,
+        pvParameters: *const libc::c_void,
+        uxPriority: UBaseType_t,
+        pxCreatedTask: *mut TaskHandle_t,
+    ) -> BaseType_t;
+    #[cfg(target_device = "esp32")]
     pub fn xTaskCreatePinnedToCore(
         pxTaskCode: TaskFunction_t,
         pcName: *const libc::c_char,
@@ -53,6 +63,19 @@ extern "C" {
         pxCreatedTask: *mut TaskHandle_t,
         xCoreID: BaseType_t,
     ) -> BaseType_t;
+}
+
+#[cfg(target_device = "esp32")]
+#[inline]
+pub unsafe fn xTaskCreate(
+    pxTaskCode: TaskFunction_t,
+    pcName: *const libc::c_char,
+    usStackDepth: u32,
+    pvParameters: *const libc::c_void,
+    uxPriority: UBaseType_t,
+    pxCreatedTask: *mut TaskHandle_t,
+) -> BaseType_t {
+    xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, tskNO_AFFINITY)
 }
 
 #[inline]
