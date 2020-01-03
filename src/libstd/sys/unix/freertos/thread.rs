@@ -39,14 +39,13 @@ impl Thread {
 
         let mut thread = Thread { name, id: ptr::null_mut(), join_mutex, state };
 
-        let res = xTaskCreatePinnedToCore(
+        let res = xTaskCreate(
             thread_start,
             thread.name.as_ptr(),
             stack as u32,
             Box::into_raw(arg) as *mut libc::c_void,
             5,
             &mut thread.id,
-            tskNO_AFFINITY,
         );
 
         if res != pdTRUE {
