@@ -52,7 +52,7 @@ fn classify_arg_ty<Ty>(arg: &mut ArgAbi<'_, Ty>, xlen: u64, fixed: bool, remaini
 
     // Aggregates which are <= 4 * 32 will be passed in registers if possible,
     // so coerce to integers.
-    if size.bits() as u64 <= MAX_ARG_IN_REGS_SIZE {
+    if arg_size.bits() as u64 <= MAX_ARG_IN_REGS_SIZE {
         // Use a single XLen int if possible, 2*XLen if 2*XLen alignment is
         // required, and a 2-element XLen array if only XLen alignment is
         // required.
