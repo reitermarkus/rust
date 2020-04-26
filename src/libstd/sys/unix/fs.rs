@@ -847,6 +847,7 @@ impl File {
         unsafe fn os_datasync(fd: c_int) -> c_int {
             libc::fsync(fd)
         }
+    }
 
     #[cfg(target_os = "freertos")]
     pub fn truncate(&self, _size: u64) -> io::Result<()> {
