@@ -1,4 +1,4 @@
-#![unstable(reason = "not public", issue = "0", feature = "net_fd")]
+#![unstable(reason = "not public", issue = "none", feature = "net_fd")]
 
 use crate::cmp;
 use crate::io::{self, Read, Initializer, IoSlice, IoSliceMut};
