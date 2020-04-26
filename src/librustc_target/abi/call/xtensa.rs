@@ -19,7 +19,7 @@ fn classify_arg_ty<Ty>(arg: &mut ArgAbi<'_, Ty>, xlen: u64, fixed: bool, remaini
     assert!(*remaining_gpr <= NUM_ARG_GPR, "Arg GPR tracking underflow");
 
     let arg_size = arg.layout.size;
-    let alignment = arg.layout.details.align.abi;
+    let alignment = arg.layout.align.abi;
 
     // Determine the number of GPRs needed to pass the current argument
     // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
