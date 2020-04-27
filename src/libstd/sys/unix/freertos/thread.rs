@@ -65,7 +65,7 @@ impl Thread {
 
                 join_mutex.lock();
 
-                start_thread(Box::into_raw(main) as *mut u8);
+                main();
 
                 let previous_state = state.swap(EXITED, SeqCst);
 
