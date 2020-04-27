@@ -578,6 +578,7 @@ pub fn home_dir() -> Option<PathBuf> {
         target_os = "android",
         target_os = "ios",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "redox"
     ))]
     unsafe fn fallback() -> Option<OsString> {
@@ -587,6 +588,7 @@ pub fn home_dir() -> Option<PathBuf> {
         target_os = "android",
         target_os = "ios",
         target_os = "emscripten",
+        target_os = "freertos",
         target_os = "redox"
     )))]
     unsafe fn fallback() -> Option<OsString> {
