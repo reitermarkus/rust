@@ -104,7 +104,7 @@ impl ReentrantMutex {
     }
 
     #[inline]
-    pub unsafe fn init(&mut self) {
+    pub unsafe fn init(&self) {
         self.atomic_init();
     }
 
