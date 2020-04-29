@@ -9,6 +9,7 @@ use crate::sys_common::thread::*;
 use crate::pin::Pin;
 
 use crate::sys::ffi::*;
+use crate::sys::thread_local;
 
 const RUNNING: usize = 0;
 const DETACHED: usize = 1;
@@ -66,6 +67,7 @@ impl Thread {
                 join_mutex.lock();
 
                 main();
+                thread_local::cleanup();
 
                 let previous_state = state.swap(EXITED, SeqCst);
 
