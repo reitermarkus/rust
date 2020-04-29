@@ -280,6 +280,7 @@
 #![feature(libc)]
 #![feature(link_args)]
 #![feature(linkage)]
+#![feature(linked_list_remove)]
 #![feature(llvm_asm)]
 #![feature(log_syntax)]
 #![feature(maybe_uninit_ref)]
