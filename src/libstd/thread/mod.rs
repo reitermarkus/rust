@@ -494,7 +494,7 @@ impl Builder {
             // returning.
             native: Some(imp::Thread::new(
                 #[cfg(target_os = "freertos")]
-                my_thread.cname().map(|s| s.to_owned()),
+                my_thread.cname(),
                 stack_size,
                 mem::transmute::<Box<dyn FnOnce() + 'a>, Box<dyn FnOnce() + 'static>>(Box::new(
                     main,

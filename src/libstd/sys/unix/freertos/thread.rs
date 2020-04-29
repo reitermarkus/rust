@@ -1,4 +1,4 @@
-use crate::ffi::CString;
+use crate::ffi::CStr;
 use crate::io;
 use crate::mem;
 use crate::ptr;
@@ -18,7 +18,6 @@ const EXITED: usize = 2;
 pub const DEFAULT_MIN_STACK_SIZE: usize = 4096;
 
 pub struct Thread {
-    name: Pin<Box<CString>>,
     id: TaskHandle_t,
     join_mutex: Arc<Mutex>,
     state: Arc<AtomicUsize>,
@@ -29,20 +28,20 @@ unsafe impl Sync for Thread {}
 
 impl Thread {
     // unsafe: see thread::Builder::spawn_unchecked for safety requirements
-    pub unsafe fn new(name: Option<CString>, stack: usize, p: Box<dyn FnOnce()>)
+    pub unsafe fn new(name: Option<&CStr>, stack: usize, p: Box<dyn FnOnce()>)
                           -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
         let state = Arc::new(AtomicUsize::new(RUNNING));
 
         let arg = box (join_mutex.clone(), state.clone(), box p);
 
-        let name = Box::pin(name.unwrap_or_else(|| CString::from_vec_unchecked(b"rust_thread".to_vec())));
+        let name = name.unwrap_or_else(|| CStr::from_bytes_with_nul_unchecked(b"\0"));
 
-        let mut thread = Thread { name, id: ptr::null_mut(), join_mutex, state };
+        let mut thread = Thread { id: ptr::null_mut(), join_mutex, state };
 
         let res = xTaskCreate(
             thread_start,
-            thread.name.as_ptr(),
+            name.as_ptr(),
             stack as u32,
             Box::into_raw(arg) as *mut libc::c_void,
             5,
