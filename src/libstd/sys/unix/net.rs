@@ -9,7 +9,7 @@ use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 use crate::time::{Duration, Instant};
 
-use libc::{c_int, c_void, size_t, sockaddr, socklen_t, EAI_SYSTEM, MSG_PEEK};
+use libc::{c_int, c_void, size_t, sockaddr, socklen_t, MSG_PEEK};
 
 pub use crate::sys::{cvt, cvt_r};
 
@@ -81,17 +81,20 @@ pub fn cvt_gai(err: c_int) -> io::Result<()> {
     // We may need to trigger a glibc workaround. See on_resolver_failure() for details.
     on_resolver_failure();
 
-    if err == EAI_SYSTEM {
-        return Err(io::Error::last_os_error());
-    }
-
     #[cfg(target_os = "freertos")]
     let detail = format!("error code {}", err);
 
     #[cfg(not(target_os = "freertos"))]
-    let detail = unsafe {
-        str::from_utf8(CStr::from_ptr(libc::gai_strerror(err)).to_bytes()).unwrap().to_owned()
+    let detail = {
+        if err == libc::EAI_SYSTEM {
+            return Err(io::Error::last_os_error());
+        }
+
+        unsafe {
+            str::from_utf8(CStr::from_ptr(libc::gai_strerror(err)).to_bytes()).unwrap().to_owned()
+        }
     };
+
     Err(io::Error::new(
         io::ErrorKind::Other,
         &format!("failed to lookup address information: {}", detail)[..],
