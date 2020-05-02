@@ -129,9 +129,6 @@ impl Socket {
             let fd = cvt(netc::socket(fam, ty, 0))?;
             let fd = NetFileDesc::new(fd);
 
-            // Setting CLOEXEC is not supported on FreeRTOS since
-            // there is no file system.
-            #[cfg(not(target_os = "freertos"))]
             fd.set_cloexec()?;
 
             let socket = Socket(fd);
@@ -271,9 +268,6 @@ impl Socket {
         let fd = cvt_r(|| unsafe { netc::accept(self.0.raw(), storage, len) })?;
         let fd = NetFileDesc::new(fd);
 
-        // Setting CLOEXEC is not supported on FreeRTOS since
-        // there is no file system.
-        #[cfg(not(target_os = "freertos"))]
         fd.set_cloexec()?;
 
         Ok(Socket(fd))
@@ -411,8 +405,7 @@ impl Socket {
     #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         let mut nonblocking = nonblocking as libc::c_int;
-        cvt(unsafe { netc::ioctl(*self.as_inner(), netc::FIONBIO, &mut nonblocking) })
-            .map(drop)
+        cvt(unsafe { netc::ioctl(*self.as_inner(), netc::FIONBIO, &mut nonblocking) }).map(drop)
     }
 
     #[cfg(any(target_os = "solaris", target_os = "illumos"))]
