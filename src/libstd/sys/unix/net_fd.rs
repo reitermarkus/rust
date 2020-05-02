@@ -3,10 +3,8 @@
 use crate::cmp;
 use crate::io::{self, Read, Initializer, IoSlice, IoSliceMut};
 use crate::mem;
-use crate::sys::{cvt, net::netc};
+use crate::sys::{cvt, net::netc::{self, c_int, c_void, ssize_t}};
 use crate::sys_common::AsInner;
-
-use libc::{c_int, c_void, ssize_t};
 
 #[derive(Debug)]
 pub struct NetFileDesc {
@@ -55,7 +53,7 @@ impl NetFileDesc {
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
             netc::readv(self.fd,
-                        bufs.as_ptr() as *const libc::iovec,
+                        bufs.as_ptr() as *const netc::iovec,
                         cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
         })?;
         Ok(ret as usize)
@@ -78,7 +76,7 @@ impl NetFileDesc {
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
             netc::writev(self.fd,
-                         bufs.as_ptr() as *const libc::iovec,
+                         bufs.as_ptr() as *const netc::iovec,
                          cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
         })?;
         Ok(ret as usize)
@@ -87,7 +85,7 @@ impl NetFileDesc {
     #[cfg(target_os = "linux")]
     pub fn get_cloexec(&self) -> io::Result<bool> {
         unsafe {
-            Ok((cvt(libc::fcntl(self.fd, libc::F_GETFD))? & libc::FD_CLOEXEC) != 0)
+            Ok((cvt(netc::fcntl(self.fd, netc::F_GETFD))? & netc::FD_CLOEXEC) != 0)
         }
     }
 
@@ -101,27 +99,34 @@ impl NetFileDesc {
                   target_os = "redox")))]
     pub fn set_cloexec(&self) -> io::Result<()> {
         unsafe {
-            cvt(libc::ioctl(self.fd, libc::FIOCLEX))?;
+            cvt(netc::ioctl(self.fd, netc::FIOCLEX))?;
             Ok(())
         }
     }
-    #[cfg(any(target_env = "newlib",
+    #[cfg(all(any(target_env = "newlib",
               target_os = "solaris",
               target_os = "emscripten",
               target_os = "fuchsia",
               target_os = "l4re",
               target_os = "linux",
               target_os = "haiku",
-              target_os = "redox"))]
+              target_os = "redox"), not(target_os = "freertos")))]
     pub fn set_cloexec(&self) -> io::Result<()> {
         unsafe {
-            let previous = cvt(libc::fcntl(self.fd, libc::F_GETFD))?;
-            let new = previous | libc::FD_CLOEXEC;
+            let previous = cvt(netc::fcntl(self.fd, netc::F_GETFD))?;
+            let new = previous | netc::FD_CLOEXEC;
             if new != previous {
-                cvt(libc::fcntl(self.fd, libc::F_SETFD, new))?;
+                cvt(netc::fcntl(self.fd, netc::F_SETFD, new))?;
             }
             Ok(())
         }
+    }
+
+    // Setting `FD_CLOEXEC` is not supported on FreeRTOS
+    // since there is no `exec` functionality.
+    #[cfg(target_os = "freertos")]
+    pub fn set_cloexec(&self) -> io::Result<()> {
+        Ok(())
     }
 
     pub fn duplicate(&self) -> io::Result<NetFileDesc> {
@@ -143,9 +148,9 @@ impl NetFileDesc {
         //
         // [1]: http://comments.gmane.org/gmane.linux.lib.musl.general/2963
         #[cfg(any(target_os = "android", target_os = "haiku"))]
-        use libc::F_DUPFD as F_DUPFD_CLOEXEC;
+        use netc::F_DUPFD as F_DUPFD_CLOEXEC;
         #[cfg(not(any(target_os = "android", target_os="haiku")))]
-        use libc::F_DUPFD_CLOEXEC;
+        use netc::F_DUPFD_CLOEXEC;
 
         let make_filedesc = |fd| {
             let fd = NetFileDesc::new(fd);
@@ -167,13 +172,13 @@ impl NetFileDesc {
                         NetFileDesc::new(fd)
                     })
                 }
-                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {
+                Err(ref e) if e.raw_os_error() == Some(netc::EINVAL) => {
                     TRY_CLOEXEC.store(false, Ordering::Relaxed);
                 }
                 Err(e) => return Err(e),
             }
         }
-        cvt(unsafe { netc::fcntl(fd, libc::F_DUPFD, 0) }).and_then(make_filedesc)
+        cvt(unsafe { netc::fcntl(fd, netc::F_DUPFD, 0) }).and_then(make_filedesc)
     }
 }
 
