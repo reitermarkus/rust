@@ -39,6 +39,8 @@ impl Thread {
 
         let mut thread = Thread { id: ptr::null_mut(), join_mutex, state };
 
+        join_mutex.lock();
+
         let res = xTaskCreate(
             thread_start,
             name.as_ptr(),
@@ -49,6 +51,8 @@ impl Thread {
         );
 
         if res != pdTRUE {
+            join_mutex.unlock();
+
             if res == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY {
                 return Err(io::Error::new(io::ErrorKind::Other, "could not allocate required memory for thread"));
             } else {
@@ -62,8 +66,6 @@ impl Thread {
             unsafe {
                 let arg = Box::<(Arc<Mutex>, Arc<AtomicUsize>, Box<Box<dyn FnOnce()>>)>::from_raw(arg as *mut _);
                 let (join_mutex, state, main) = *arg;
-
-                join_mutex.lock();
 
                 main();
                 thread_local::cleanup();
