@@ -1,4 +1,4 @@
-use crate::spec::{abi::Abi, LinkerFlavor, PanicStrategy, Target, TargetOptions, TargetResult, RelocModel};
+use crate::spec::{abi::Abi, LinkerFlavor, LldFlavor, PanicStrategy, Target, TargetOptions, TargetResult, RelocModel};
 
 pub fn target() -> TargetResult {
     Ok(Target {
@@ -11,12 +11,13 @@ pub fn target() -> TargetResult {
         target_os: "freertos".to_string(),
         target_env: "newlib".to_string(),
         target_vendor: "espressif".to_string(),
-        linker_flavor: LinkerFlavor::Gcc,
+        linker_flavor: LinkerFlavor::Lld(LldFlavor::Ld),
 
         options: TargetOptions {
+            executables: true,
             target_family: Some("unix".to_string()),
             cpu: "esp8266".to_string(),
-            linker: Some("xtensa-lx106-elf-gcc".to_string()),
+            linker: Some("rust-lld".to_string()),
 
             max_atomic_width: Some(32),
 
