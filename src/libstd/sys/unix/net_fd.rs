@@ -1,9 +1,12 @@
 #![unstable(reason = "not public", issue = "none", feature = "net_fd")]
 
 use crate::cmp;
-use crate::io::{self, Read, Initializer, IoSlice, IoSliceMut};
+use crate::io::{self, Initializer, IoSlice, IoSliceMut, Read};
 use crate::mem;
-use crate::sys::{cvt, net::netc::{self, c_int, c_void, ssize_t}};
+use crate::sys::{
+    cvt,
+    net::netc::{self, c_int, c_void, ssize_t},
+};
 use crate::sys_common::AsInner;
 
 #[derive(Debug)]
@@ -32,7 +35,9 @@ impl NetFileDesc {
         NetFileDesc { fd }
     }
 
-    pub fn raw(&self) -> c_int { self.fd }
+    pub fn raw(&self) -> c_int {
+        self.fd
+    }
 
     /// Extracts the actual file descriptor without closing it.
     pub fn into_raw(self) -> c_int {
@@ -43,18 +48,18 @@ impl NetFileDesc {
 
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            netc::read(self.fd,
-                       buf.as_mut_ptr() as *mut c_void,
-                       cmp::min(buf.len(), max_len()))
+            netc::read(self.fd, buf.as_mut_ptr() as *mut c_void, cmp::min(buf.len(), max_len()))
         })?;
         Ok(ret as usize)
     }
 
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            netc::readv(self.fd,
-                        bufs.as_ptr() as *const netc::iovec,
-                        cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
+            netc::readv(
+                self.fd,
+                bufs.as_ptr() as *const netc::iovec,
+                cmp::min(bufs.len(), c_int::max_value() as usize) as c_int,
+            )
         })?;
         Ok(ret as usize)
     }
@@ -66,51 +71,56 @@ impl NetFileDesc {
 
     pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            netc::write(self.fd,
-                        buf.as_ptr() as *const c_void,
-                        cmp::min(buf.len(), max_len()))
+            netc::write(self.fd, buf.as_ptr() as *const c_void, cmp::min(buf.len(), max_len()))
         })?;
         Ok(ret as usize)
     }
 
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
-            netc::writev(self.fd,
-                         bufs.as_ptr() as *const netc::iovec,
-                         cmp::min(bufs.len(), c_int::max_value() as usize) as c_int)
+            netc::writev(
+                self.fd,
+                bufs.as_ptr() as *const netc::iovec,
+                cmp::min(bufs.len(), c_int::max_value() as usize) as c_int,
+            )
         })?;
         Ok(ret as usize)
     }
 
     #[cfg(target_os = "linux")]
     pub fn get_cloexec(&self) -> io::Result<bool> {
-        unsafe {
-            Ok((cvt(netc::fcntl(self.fd, netc::F_GETFD))? & netc::FD_CLOEXEC) != 0)
-        }
+        unsafe { Ok((cvt(netc::fcntl(self.fd, netc::F_GETFD))? & netc::FD_CLOEXEC) != 0) }
     }
 
-    #[cfg(not(any(target_env = "newlib",
-                  target_os = "solaris",
-                  target_os = "emscripten",
-                  target_os = "fuchsia",
-                  target_os = "l4re",
-                  target_os = "linux",
-                  target_os = "haiku",
-                  target_os = "redox")))]
+    #[cfg(not(any(
+        target_env = "newlib",
+        target_os = "solaris",
+        target_os = "emscripten",
+        target_os = "fuchsia",
+        target_os = "l4re",
+        target_os = "linux",
+        target_os = "haiku",
+        target_os = "redox"
+    )))]
     pub fn set_cloexec(&self) -> io::Result<()> {
         unsafe {
             cvt(netc::ioctl(self.fd, netc::FIOCLEX))?;
             Ok(())
         }
     }
-    #[cfg(all(any(target_env = "newlib",
-              target_os = "solaris",
-              target_os = "emscripten",
-              target_os = "fuchsia",
-              target_os = "l4re",
-              target_os = "linux",
-              target_os = "haiku",
-              target_os = "redox"), not(target_os = "freertos")))]
+    #[cfg(all(
+        any(
+            target_env = "newlib",
+            target_os = "solaris",
+            target_os = "emscripten",
+            target_os = "fuchsia",
+            target_os = "l4re",
+            target_os = "linux",
+            target_os = "haiku",
+            target_os = "redox"
+        ),
+        not(target_os = "freertos")
+    ))]
     pub fn set_cloexec(&self) -> io::Result<()> {
         unsafe {
             let previous = cvt(netc::fcntl(self.fd, netc::F_GETFD))?;
@@ -149,7 +159,7 @@ impl NetFileDesc {
         // [1]: http://comments.gmane.org/gmane.linux.lib.musl.general/2963
         #[cfg(any(target_os = "android", target_os = "haiku"))]
         use netc::F_DUPFD as F_DUPFD_CLOEXEC;
-        #[cfg(not(any(target_os = "android", target_os="haiku")))]
+        #[cfg(not(any(target_os = "android", target_os = "haiku")))]
         use netc::F_DUPFD_CLOEXEC;
 
         let make_filedesc = |fd| {
@@ -157,8 +167,7 @@ impl NetFileDesc {
             fd.set_cloexec()?;
             Ok(fd)
         };
-        static TRY_CLOEXEC: AtomicBool =
-            AtomicBool::new(!cfg!(target_os = "android"));
+        static TRY_CLOEXEC: AtomicBool = AtomicBool::new(!cfg!(target_os = "android"));
         let fd = self.raw();
         if TRY_CLOEXEC.load(Ordering::Relaxed) {
             match cvt(unsafe { netc::fcntl(fd, F_DUPFD_CLOEXEC, 0) }) {
@@ -194,7 +203,9 @@ impl<'a> Read for &'a NetFileDesc {
 }
 
 impl AsInner<c_int> for NetFileDesc {
-    fn as_inner(&self) -> &c_int { &self.fd }
+    fn as_inner(&self) -> &c_int {
+        &self.fd
+    }
 }
 
 impl Drop for NetFileDesc {
