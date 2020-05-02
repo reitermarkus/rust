@@ -18,6 +18,7 @@ pub fn target() -> TargetResult {
             target_family: Some("unix".to_string()),
             cpu: "esp32".to_string(),
             linker: Some("rust-lld".to_string()),
+
             max_atomic_width: Some(32),
 
             // Because these devices have very little resources having an
