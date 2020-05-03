@@ -54,7 +54,7 @@ pub unsafe fn create(dtor: Option<unsafe extern "C" fn(*mut u8)>) -> Key {
 
 #[inline]
 pub unsafe fn set(key: Key, value: *mut u8) {
-    #[cfg(debug)]
+    #[cfg(debug_assertions)]
     {
         LOCK.read();
 
