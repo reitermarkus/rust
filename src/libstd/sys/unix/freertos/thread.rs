@@ -31,6 +31,7 @@ impl Thread {
     pub unsafe fn new(name: Option<&CStr>, stack: usize, p: Box<dyn FnOnce()>)
                           -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
+        join_mutex.lock();
         let state = Arc::new(AtomicUsize::new(RUNNING));
 
         let arg = box (join_mutex.clone(), state.clone(), box p);
@@ -39,7 +40,6 @@ impl Thread {
 
         let mut thread = Thread { id: ptr::null_mut(), join_mutex, state };
 
-        join_mutex.lock();
 
         let res = xTaskCreate(
             thread_start,
