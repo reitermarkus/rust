@@ -5,8 +5,6 @@ use crate::ptr;
 use crate::sys::mutex::Mutex;
 use crate::time::Duration;
 use crate::sync::{Arc, atomic::{AtomicUsize, Ordering::SeqCst}};
-use crate::sys_common::thread::*;
-use crate::pin::Pin;
 
 use crate::sys::ffi::*;
 use crate::sys::thread_local;
