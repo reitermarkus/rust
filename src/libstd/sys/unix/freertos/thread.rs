@@ -29,7 +29,6 @@ impl Thread {
     pub unsafe fn new(name: Option<&CStr>, stack: usize, p: Box<dyn FnOnce()>)
                           -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
-        join_mutex.lock();
         let state = Arc::new(AtomicUsize::new(RUNNING));
 
         let arg = box (join_mutex.clone(), state.clone(), box p);
@@ -38,6 +37,7 @@ impl Thread {
 
         let mut thread = Thread { id: ptr::null_mut(), join_mutex, state };
 
+        thread.join_mutex.lock();
 
         let res = xTaskCreate(
             thread_start,
@@ -49,7 +49,7 @@ impl Thread {
         );
 
         if res != pdTRUE {
-            join_mutex.unlock();
+            thread.join_mutex.unlock();
 
             if res == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY {
                 return Err(io::Error::new(io::ErrorKind::Other, "could not allocate required memory for thread"));
