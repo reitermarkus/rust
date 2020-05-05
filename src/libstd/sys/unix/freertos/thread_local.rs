@@ -23,7 +23,7 @@ unsafe fn set_tls(tls: *mut Tls) {
 
 #[inline]
 pub unsafe fn cleanup() {
-    if let Some(mut tls) = get_tls().as_mut() {
+    if let Some(tls) = get_tls().as_mut() {
         let tls = Box::from_raw(tls);
 
         LOCK.read();
@@ -73,10 +73,10 @@ pub unsafe fn set(key: Key, value: *mut u8) {
     }
 
 
-    let mut tls = if let Some(mut tls) = get_tls().as_mut() {
+    let tls = if let Some(tls) = get_tls().as_mut() {
         tls
     } else {
-        let mut tls = Box::into_raw(box Tls::new());
+        let tls = Box::into_raw(box Tls::new());
         set_tls(tls);
         &mut *tls
     };
