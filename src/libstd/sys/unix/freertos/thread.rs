@@ -4,21 +4,22 @@ use crate::mem;
 use crate::ptr;
 use crate::sys::mutex::Mutex;
 use crate::time::Duration;
-use crate::sync::{Arc, atomic::{AtomicUsize, Ordering::SeqCst}};
+use crate::sync::{Arc, atomic::{AtomicU8, Ordering::SeqCst}};
 
 use crate::sys::ffi::*;
 use crate::sys::thread_local;
 
-const RUNNING: usize = 0;
-const DETACHED: usize = 1;
-const EXITED: usize = 2;
+const PENDING: u8 = 0;
+const RUNNING: u8 = 1;
+const DETACHED: u8 = 2;
+const EXITED: u8 = 3;
 
 pub const DEFAULT_MIN_STACK_SIZE: usize = 4096;
 
 pub struct Thread {
     id: TaskHandle_t,
     join_mutex: Arc<Mutex>,
-    state: Arc<AtomicUsize>,
+    state: Arc<AtomicU8>,
 }
 
 unsafe impl Send for Thread {}
@@ -29,7 +30,7 @@ impl Thread {
     pub unsafe fn new(name: Option<&CStr>, stack: usize, p: Box<dyn FnOnce()>)
                           -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
-        let state = Arc::new(AtomicUsize::new(RUNNING));
+        let state = Arc::new(AtomicU8::new(PENDING));
 
         let arg = box (join_mutex.clone(), state.clone(), box p);
 
@@ -37,19 +38,21 @@ impl Thread {
 
         let mut thread = Thread { id: ptr::null_mut(), join_mutex, state };
 
-        thread.join_mutex.lock();
+        let arg = Box::into_raw(arg);
 
         let res = xTaskCreate(
             thread_start,
             name.as_ptr(),
             stack as u32,
-            Box::into_raw(arg) as *mut libc::c_void,
+            arg as *mut libc::c_void,
             5,
             &mut thread.id,
         );
 
         if res != pdTRUE {
-            thread.join_mutex.unlock();
+            if thread.state.load(SeqCst) == PENDING {
+                drop(Box::from_raw(arg));
+            }
 
             if res == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY {
                 return Err(io::Error::new(io::ErrorKind::Other, "could not allocate required memory for thread"));
@@ -62,8 +65,12 @@ impl Thread {
 
         extern fn thread_start(arg: *mut libc::c_void) -> *mut libc::c_void {
             unsafe {
-                let arg = Box::<(Arc<Mutex>, Arc<AtomicUsize>, Box<Box<dyn FnOnce()>>)>::from_raw(arg as *mut _);
+                let arg = Box::<(Arc<Mutex>, Arc<AtomicU8>, Box<Box<dyn FnOnce()>>)>::from_raw(arg as *mut _);
                 let (join_mutex, state, main) = *arg;
+
+                join_mutex.lock();
+
+                state.store(RUNNING, SeqCst);
 
                 main();
                 thread_local::cleanup();
@@ -118,6 +125,8 @@ impl Thread {
     pub fn join(self) {
         unsafe {
             assert!(self.id != xTaskGetCurrentTaskHandle());
+
+            while self.state.load(SeqCst) == PENDING {}
 
             // Just wait for the thread to finish, the rest is handled by `Drop`.
             self.join_mutex.lock();
