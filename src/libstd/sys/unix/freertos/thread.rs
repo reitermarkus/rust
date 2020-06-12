@@ -100,26 +100,20 @@ impl Thread {
     }
 
     pub fn sleep(dur: Duration) {
-        let secs = dur.as_secs();
-        let nanos = dur.subsec_nanos();
+        let tick_rate = unsafe { xPortGetTickRateHz() };
 
-        let mut remaining_ms = u128::from(secs) * 1_000 + (u128::from(nanos) + 999999) / 1000000;
+        let mut ticks_to_delay: u64 = dur
+            .as_secs()
+            .checked_mul(u64::from(tick_rate))
+            .and_then(|ms| ms.checked_add(u64::from(dur.subsec_nanos() / tick_rate)))
+            .expect("overflow converting duration to ticks");
 
-        unsafe {
-            let ms_per_tick = u128::from(1000 / xPortGetTickRateHz());
-
-            while remaining_ms > 0 {
-                let ticks_to_delay = (remaining_ms + ms_per_tick - 1) / ms_per_tick;
-
-                if ticks_to_delay > u128::from(crate::u32::MAX) {
-                    remaining_ms -= ms_per_tick * u128::from(crate::u32::MAX);
-                    vTaskDelay(crate::u32::MAX);
-                } else {
-                    remaining_ms = 0;
-                    vTaskDelay(ticks_to_delay as u32);
-                }
-            }
+        while ticks_to_delay > u64::from(crate::u32::MAX) {
+            ticks_to_delay -= u64::from(crate::u32::MAX);
+            unsafe { vTaskDelay(crate::u32::MAX) };
         }
+
+        unsafe { vTaskDelay(ticks_to_delay as u32) };
     }
 
     pub fn join(self) {
