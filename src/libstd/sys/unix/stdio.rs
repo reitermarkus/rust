@@ -40,6 +40,7 @@ impl io::Read for Stdin {
         ManuallyDrop::new(FileDesc::new(libc::STDIN_FILENO)).read_vectored(bufs)
     }
 
+    #[cfg(not(target_arch = "xtensa"))]
     #[inline]
     fn is_read_vectored(&self) -> bool {
         true
@@ -68,6 +69,7 @@ impl io::Write for Stdout {
         ManuallyDrop::new(FileDesc::new(libc::STDOUT_FILENO)).write_vectored(bufs)
     }
 
+    #[cfg(not(target_arch = "xtensa"))]
     #[inline]
     fn is_write_vectored(&self) -> bool {
         true
