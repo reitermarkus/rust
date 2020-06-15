@@ -7,7 +7,6 @@ pub type TaskHandle_t = *mut libc::c_void;
 pub type QueueHandle_t = *mut libc::c_void;
 pub type SemaphoreHandle_t = QueueHandle_t;
 pub type TaskFunction_t = extern "C" fn(*mut libc::c_void) -> *mut libc::c_void;
-pub type TlsDeleteCallbackFunction_t = unsafe extern "C" fn(libc::c_int, *mut libc::c_void);
 
 pub const queueQUEUE_TYPE_MUTEX: u8 = 1;
 pub const queueQUEUE_TYPE_RECURSIVE_MUTEX: u8 = 4;
@@ -66,7 +65,6 @@ extern "C" {
     ) -> BaseType_t;
     pub fn pvTaskGetThreadLocalStoragePointer(xTaskToQuery: TaskHandle_t, xIndex: BaseType_t) -> *mut libc::c_void;
     pub fn vTaskSetThreadLocalStoragePointer(xTaskToQuery: TaskHandle_t, xIndex: BaseType_t, pvValue: *mut libc::c_void);
-    pub fn vTaskSetThreadLocalStoragePointerAndDelCallback(xTaskToQuery: TaskHandle_t, xIndex: BaseType_t, pvValue: *mut libc::c_void, xDelCallback: TlsDeleteCallbackFunction_t);
 }
 
 #[cfg(target_device = "esp32")]
