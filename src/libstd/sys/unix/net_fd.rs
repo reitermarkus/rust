@@ -3,6 +3,7 @@
 use crate::cmp;
 use crate::io::{self, Initializer, IoSlice, IoSliceMut, Read};
 use crate::mem;
+use crate::sync::atomic::{AtomicBool, Ordering};
 use crate::sys::{
     cvt,
     net::netc::{self, c_int, c_void, ssize_t},
@@ -105,6 +106,7 @@ impl NetFileDesc {
     #[cfg(not(any(
         target_env = "newlib",
         target_os = "solaris",
+        target_os = "illumos",
         target_os = "emscripten",
         target_os = "fuchsia",
         target_os = "l4re",
@@ -122,6 +124,7 @@ impl NetFileDesc {
         any(
             target_env = "newlib",
             target_os = "solaris",
+            target_os = "illumos",
             target_os = "emscripten",
             target_os = "fuchsia",
             target_os = "l4re",
@@ -150,8 +153,6 @@ impl NetFileDesc {
     }
 
     pub fn duplicate(&self) -> io::Result<NetFileDesc> {
-        use crate::sync::atomic::{AtomicBool, Ordering};
-
         // We want to atomically duplicate this file descriptor and set the
         // CLOEXEC flag, and currently that's done via F_DUPFD_CLOEXEC. This
         // flag, however, isn't supported on older Linux kernels (earlier than
@@ -189,7 +190,7 @@ impl NetFileDesc {
                         make_filedesc(fd)?
                     } else {
                         NetFileDesc::new(fd)
-                    })
+                    });
                 }
                 Err(ref e) if e.raw_os_error() == Some(netc::EINVAL) => {
                     TRY_CLOEXEC.store(false, Ordering::Relaxed);
