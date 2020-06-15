@@ -1,9 +1,7 @@
 use crate::cmp;
-use crate::ffi::CStr;
 use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::net::{Shutdown, SocketAddr};
-use crate::str;
 use crate::sys::net_fd::NetFileDesc;
 use crate::sys_common::net::{getsockopt, setsockopt, sockaddr_to_addr};
 use crate::sys_common::{AsInner, FromInner, IntoInner};
@@ -91,6 +89,8 @@ pub fn cvt_gai(err: c_int) -> io::Result<()> {
         }
 
         unsafe {
+            use crate::str;
+            use crate::ffi::CStr;
             str::from_utf8(CStr::from_ptr(libc::gai_strerror(err)).to_bytes()).unwrap().to_owned()
         }
     };
