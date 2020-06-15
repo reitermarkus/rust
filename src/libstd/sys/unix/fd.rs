@@ -46,12 +46,6 @@ impl FileDesc {
         fd
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn read(&self, _buf: &mut [u8]) -> io::Result<usize> {
-        crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
         let ret = cvt(unsafe {
             libc::read(self.fd, buf.as_mut_ptr() as *mut c_void, cmp::min(buf.len(), max_len()))
@@ -59,12 +53,6 @@ impl FileDesc {
         Ok(ret as usize)
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn read_vectored(&self, _bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
             libc::readv(
@@ -115,12 +103,6 @@ impl FileDesc {
         }
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn write(&self, _buf: &[u8]) -> io::Result<usize> {
-        crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
         let ret = cvt(unsafe {
             libc::write(self.fd, buf.as_ptr() as *const c_void, cmp::min(buf.len(), max_len()))
@@ -128,12 +110,6 @@ impl FileDesc {
         Ok(ret as usize)
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn write_vectored(&self, _bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-         crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         let ret = cvt(unsafe {
             libc::writev(
