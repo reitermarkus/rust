@@ -291,7 +291,6 @@ impl AsInner<c_int> for FileDesc {
     }
 }
 
-#[cfg(not(target_os = "freertos"))]
 impl Drop for FileDesc {
     fn drop(&mut self) {
         // Note that errors are ignored when closing a file descriptor. The
