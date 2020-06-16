@@ -102,14 +102,11 @@ impl Thread {
     pub fn sleep(dur: Duration) {
         let tick_rate = unsafe { xPortGetTickRateHz() };
 
-        let mut ticks_to_delay: u64 = dur
-            .as_secs()
-            .checked_mul(u64::from(tick_rate))
-            .and_then(|ms| ms.checked_add(u64::from(dur.subsec_nanos() / tick_rate)))
-            .expect("overflow converting duration to ticks");
+        let mut ticks_to_delay = u128::from(dur.as_secs()) * u128::from(tick_rate)
+            + u128::from(((dur.subsec_millis() + 1) * tick_rate - 1)) / u128::from(tick_rate);
 
-        while ticks_to_delay > u64::from(crate::u32::MAX) {
-            ticks_to_delay -= u64::from(crate::u32::MAX);
+        while ticks_to_delay > u128::from(crate::u32::MAX) {
+            ticks_to_delay -= u128::from(crate::u32::MAX);
             unsafe { vTaskDelay(crate::u32::MAX) };
         }
 
