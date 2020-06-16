@@ -2,9 +2,12 @@ use crate::ffi::CStr;
 use crate::io;
 use crate::mem;
 use crate::ptr;
+use crate::sync::{
+    atomic::{AtomicU8, Ordering::SeqCst},
+    Arc,
+};
 use crate::sys::mutex::Mutex;
 use crate::time::Duration;
-use crate::sync::{Arc, atomic::{AtomicU8, Ordering::SeqCst}};
 
 use crate::sys::ffi::*;
 use crate::sys::thread_local;
@@ -27,8 +30,11 @@ unsafe impl Sync for Thread {}
 
 impl Thread {
     // unsafe: see thread::Builder::spawn_unchecked for safety requirements
-    pub unsafe fn new(name: Option<&CStr>, stack: usize, p: Box<dyn FnOnce()>)
-                          -> io::Result<Thread> {
+    pub unsafe fn new(
+        name: Option<&CStr>,
+        stack: usize,
+        p: Box<dyn FnOnce()>,
+    ) -> io::Result<Thread> {
         let join_mutex = Arc::new(Mutex::new());
         let state = Arc::new(AtomicU8::new(PENDING));
 
@@ -55,7 +61,10 @@ impl Thread {
             }
 
             if res == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY {
-                return Err(io::Error::new(io::ErrorKind::Other, "could not allocate required memory for thread"));
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "could not allocate required memory for thread",
+                ));
             } else {
                 return Err(io::ErrorKind::WouldBlock.into());
             }
@@ -63,9 +72,11 @@ impl Thread {
 
         return Ok(thread);
 
-        extern fn thread_start(arg: *mut libc::c_void) -> *mut libc::c_void {
+        extern "C" fn thread_start(arg: *mut libc::c_void) -> *mut libc::c_void {
             unsafe {
-                let arg = Box::<(Arc<Mutex>, Arc<AtomicU8>, Box<Box<dyn FnOnce()>>)>::from_raw(arg as *mut _);
+                let arg = Box::<(Arc<Mutex>, Arc<AtomicU8>, Box<Box<dyn FnOnce()>>)>::from_raw(
+                    arg as *mut _,
+                );
                 let (join_mutex, state, main) = *arg;
 
                 join_mutex.lock();
@@ -125,7 +136,9 @@ impl Thread {
         }
     }
 
-    pub fn id(&self) -> TaskHandle_t { self.id }
+    pub fn id(&self) -> TaskHandle_t {
+        self.id
+    }
 
     pub fn into_id(self) -> TaskHandle_t {
         let id = self.id;
@@ -149,6 +162,10 @@ impl Drop for Thread {
 pub mod guard {
     use crate::ops::Range;
     pub type Guard = Range<usize>;
-    pub unsafe fn current() -> Option<Guard> { None }
-    pub unsafe fn init() -> Option<Guard> { None }
+    pub unsafe fn current() -> Option<Guard> {
+        None
+    }
+    pub unsafe fn init() -> Option<Guard> {
+        None
+    }
 }
