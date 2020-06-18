@@ -113,8 +113,30 @@ impl Thread {
     pub fn sleep(dur: Duration) {
         let tick_rate = unsafe { xPortGetTickRateHz() };
 
+        let millis;
+
+        #[cfg(target_arch = "xtensa")]
+        {
+            extern "C" {
+                fn ets_delay_us(us: u32);
+            }
+
+            let mut micros = dur.subsec_micros();
+            millis = micros / 1000;
+            micros = micros % 1000;
+
+            if micros > 0 {
+                unsafe { ets_delay_us(micros) };
+            }
+        }
+
+        #[cfg(not(target_arch = "xtensa"))]
+        {
+            millis = dur.subsec_millis();
+        }
+
         let mut ticks_to_delay = u128::from(dur.as_secs()) * u128::from(tick_rate)
-            + u128::from(((dur.subsec_millis() + 1) * tick_rate - 1)) / u128::from(tick_rate);
+            + u128::from(((millis + 1) * tick_rate - 1)) / u128::from(tick_rate);
 
         while ticks_to_delay > u128::from(crate::u32::MAX) {
             ticks_to_delay -= u128::from(crate::u32::MAX);
