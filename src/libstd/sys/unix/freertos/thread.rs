@@ -111,7 +111,13 @@ impl Thread {
     }
 
     pub fn sleep(dur: Duration) {
-        let tick_rate = unsafe { xPortGetTickRateHz() };
+        use crate::cmp;
+
+        let nanos = dur.as_nanos();
+
+        if nanos == 0 {
+            return;
+        }
 
         let millis;
 
@@ -121,29 +127,34 @@ impl Thread {
                 fn ets_delay_us(us: u32);
             }
 
-            let mut micros = dur.subsec_micros();
-            millis = micros / 1000;
-            micros = micros % 1000;
+            let mut micros = cmp::max(1_000, nanos) / 1_000;
+            let amt = (micros % 1_000);
 
-            if micros > 0 {
-                unsafe { ets_delay_us(micros) };
+            if amt > 0 {
+                micros -= amt;
+                unsafe { ets_delay_us(amt as u32) };
             }
+
+            if micros == 0 {
+                return;
+            }
+
+            millis = cmp::max(1_000, micros) / 1_000;
         }
 
         #[cfg(not(target_arch = "xtensa"))]
         {
-            millis = dur.subsec_millis();
+            millis = cmp::max(1_000_000, nanos) / 1_000_000;
         }
 
-        let mut ticks_to_delay = u128::from(dur.as_secs()) * u128::from(tick_rate)
-            + u128::from(((millis + 1) * tick_rate - 1)) / u128::from(tick_rate);
+        let tick_rate = unsafe { xPortGetTickRateHz() } as u128;
+        let mut ticks_to_delay = ((millis + 1) * tick_rate - 1) / tick_rate;
 
-        while ticks_to_delay > u128::from(crate::u32::MAX) {
-            ticks_to_delay -= u128::from(crate::u32::MAX);
-            unsafe { vTaskDelay(crate::u32::MAX) };
+        while ticks_to_delay > 0 {
+            let amt = cmp::min(u32::max_value() as u128, ticks_to_delay);
+            ticks_to_delay -= amt;
+            unsafe { vTaskDelay(amt as u32) };
         }
-
-        unsafe { vTaskDelay(ticks_to_delay as u32) };
     }
 
     pub fn join(self) {
