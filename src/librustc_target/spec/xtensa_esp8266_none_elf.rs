@@ -18,6 +18,7 @@ pub fn target() -> TargetResult {
             target_family: Some("unix".to_string()),
             cpu: "esp8266".to_string(),
             linker: Some("xtensa-lx106-elf-gcc".to_string()),
+            linker_is_gnu: true,
 
             max_atomic_width: Some(32),
 
