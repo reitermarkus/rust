@@ -9,12 +9,12 @@ mod xtensa {
     use super::*;
 
     extern "C" {
-        fn ets_write_char_uart(c: libc::c_char);
+        fn ets_printf(fmt: *const libc::c_char, ...) -> libc::c_int;
     }
 
     pub fn write(buf: &[u8]) -> io::Result<usize> {
         for &b in buf.iter() {
-            unsafe { ets_write_char_uart(b as libc::c_char) }
+            unsafe { ets_printf(b"%c\0" as *const u8 as *const libc::c_char, b as libc::c_int) };
         }
 
         Ok(buf.len())
