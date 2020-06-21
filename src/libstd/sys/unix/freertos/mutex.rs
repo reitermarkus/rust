@@ -1,26 +1,26 @@
 use crate::cell::UnsafeCell;
 use crate::ptr;
-use crate::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+use crate::sync::atomic::{AtomicU8, Ordering::SeqCst};
 
 use crate::sys::ffi::*;
 
 pub struct Mutex {
     inner: UnsafeCell<SemaphoreHandle_t>,
-    initialized: AtomicUsize,
+    initialized: AtomicU8,
 }
 
 unsafe impl Send for Mutex {}
 unsafe impl Sync for Mutex {}
 
-const UNINITIALIZING: usize = 3;
-const UNINITIALIZED: usize = 2;
-const INITIALIZING: usize = 1;
-const INITIALIZED: usize = 0;
+const UNINITIALIZING: u8 = 3;
+const UNINITIALIZED: u8 = 2;
+const INITIALIZING: u8 = 1;
+const INITIALIZED: u8 = 0;
 
 #[allow(dead_code)] // sys isn't exported yet
 impl Mutex {
     pub const fn new() -> Mutex {
-        Mutex { inner: UnsafeCell::new(ptr::null_mut()), initialized: AtomicUsize::new(UNINITIALIZED) }
+        Mutex { inner: UnsafeCell::new(ptr::null_mut()), initialized: AtomicU8::new(UNINITIALIZED) }
     }
 
     #[inline]
@@ -89,7 +89,7 @@ impl Drop for Mutex {
 
 pub struct ReentrantMutex {
     inner: UnsafeCell<SemaphoreHandle_t>,
-    initialized: AtomicUsize,
+    initialized: AtomicU8,
 }
 
 unsafe impl Send for ReentrantMutex {}
@@ -99,7 +99,7 @@ impl ReentrantMutex {
     pub const unsafe fn uninitialized() -> ReentrantMutex {
         ReentrantMutex {
             inner: UnsafeCell::new(ptr::null_mut()),
-            initialized: AtomicUsize::new(UNINITIALIZED),
+            initialized: AtomicU8::new(UNINITIALIZED),
         }
     }
 
