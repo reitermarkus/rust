@@ -38,7 +38,7 @@ impl Thread {
         let join_mutex = Arc::new(Mutex::new());
         let state = Arc::new(AtomicU8::new(PENDING));
 
-        let arg = box (join_mutex.clone(), state.clone(), box p);
+        let arg = box (join_mutex.clone(), state.clone(), p);
 
         let name = name.unwrap_or_else(|| CStr::from_bytes_with_nul_unchecked(b"\0"));
 
@@ -74,30 +74,29 @@ impl Thread {
 
         extern "C" fn thread_start(arg: *mut libc::c_void) -> *mut libc::c_void {
             unsafe {
-                let arg = Box::<(Arc<Mutex>, Arc<AtomicU8>, Box<Box<dyn FnOnce()>>)>::from_raw(
-                    arg as *mut _,
-                );
-                let (join_mutex, state, main) = *arg;
+                let previous_state = {
+                    let (join_mutex, state, main) =
+                        *Box::from_raw(arg as *mut (Arc<Mutex>, Arc<AtomicU8>, Box<dyn FnOnce()>));
 
-                join_mutex.lock();
+                    join_mutex.lock();
 
-                state.store(RUNNING, SeqCst);
+                    state.store(RUNNING, SeqCst);
 
-                main();
-                thread_local::cleanup();
+                    main();
+                    thread_local::cleanup();
 
-                let previous_state = state.swap(EXITED, SeqCst);
+                    let previous_state = state.swap(EXITED, SeqCst);
 
-                join_mutex.unlock();
+                    join_mutex.unlock();
 
-                // We drop these here manually since we don't know
-                // if `vTaskDelete` will ensure they are dropped.
-                drop(state);
-                drop(join_mutex);
+                    previous_state
+                };
 
                 if previous_state == DETACHED {
+                    drop(previous_state);
                     vTaskDelete(ptr::null_mut());
                 } else {
+                    drop(previous_state);
                     vTaskSuspend(ptr::null_mut());
                 }
             }
