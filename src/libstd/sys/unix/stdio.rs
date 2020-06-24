@@ -4,23 +4,6 @@ use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem::ManuallyDrop;
 use crate::sys::fd::FileDesc;
 
-#[cfg(target_arch = "xtensa")]
-mod xtensa {
-    use super::*;
-
-    extern "C" {
-        fn ets_printf(fmt: *const libc::c_char, ...) -> libc::c_int;
-    }
-
-    pub fn write(buf: &[u8]) -> io::Result<usize> {
-        for &b in buf.iter() {
-            unsafe { ets_printf(b"%c\0" as *const u8 as *const libc::c_char, b as libc::c_int) };
-        }
-
-        Ok(buf.len())
-    }
-}
-
 pub struct Stdin(());
 pub struct Stdout(());
 pub struct Stderr(());
@@ -36,11 +19,12 @@ impl io::Read for Stdin {
         ManuallyDrop::new(FileDesc::new(libc::STDIN_FILENO)).read(buf)
     }
 
+    #[cfg(not(all(target_os = "freertos", target_arch = "xtensa")))]
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDIN_FILENO)).read_vectored(bufs)
     }
 
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(all(target_os = "freertos", target_arch = "xtensa")))]
     #[inline]
     fn is_read_vectored(&self) -> bool {
         true
@@ -54,22 +38,16 @@ impl Stdout {
 }
 
 impl io::Write for Stdout {
-    #[cfg(target_arch = "xtensa")]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        xtensa::write(buf)
-    }
-
-    #[cfg(not(target_arch = "xtensa"))]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDOUT_FILENO)).write(buf)
     }
 
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(all(target_os = "freertos", target_arch = "xtensa")))]
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDOUT_FILENO)).write_vectored(bufs)
     }
 
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(all(target_os = "freertos", target_arch = "xtensa")))]
     #[inline]
     fn is_write_vectored(&self) -> bool {
         true
@@ -87,21 +65,16 @@ impl Stderr {
 }
 
 impl io::Write for Stderr {
-    #[cfg(target_arch = "xtensa")]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        xtensa::write(buf)
-    }
-
-    #[cfg(not(target_arch = "xtensa"))]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDERR_FILENO)).write(buf)
     }
 
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(all(target_os = "freertos", target_arch = "xtensa")))]
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         ManuallyDrop::new(FileDesc::new(libc::STDERR_FILENO)).write_vectored(bufs)
     }
 
+    #[cfg(not(all(target_os = "freertos", target_arch = "xtensa")))]
     #[inline]
     fn is_write_vectored(&self) -> bool {
         true
