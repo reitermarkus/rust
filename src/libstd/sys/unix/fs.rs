@@ -724,12 +724,6 @@ impl File {
         File::open_c(&path, opts)
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn open_c(_path: &CStr, _opts: &OpenOptions) -> io::Result<File> {
-        crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn open_c(path: &CStr, opts: &OpenOptions) -> io::Result<File> {
         let flags = libc::O_CLOEXEC
             | opts.get_access_mode()?
@@ -792,12 +786,6 @@ impl File {
         Ok(File(fd))
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn file_attr(&self) -> io::Result<FileAttr> {
-        crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn file_attr(&self) -> io::Result<FileAttr> {
         let fd = self.0.raw();
 
@@ -1060,12 +1048,6 @@ pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "freertos")]
-pub fn set_perm(_p: &Path, _perm: FilePermissions) -> io::Result<()> {
-    crate::sys::unsupported()
-}
-
-#[cfg(not(target_os = "freertos"))]
 pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
     let p = cstr(p)?;
     cvt_r(|| unsafe { libc::chmod(p.as_ptr(), perm.mode) })?;
@@ -1078,12 +1060,6 @@ pub fn rmdir(p: &Path) -> io::Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "freertos")]
-pub fn readlink(_p: &Path) -> io::Result<PathBuf> {
-    crate::sys::unsupported()
-}
-
-#[cfg(not(target_os = "freertos"))]
 pub fn readlink(p: &Path) -> io::Result<PathBuf> {
     let c_path = cstr(p)?;
     let p = c_path.as_ptr();
@@ -1111,12 +1087,6 @@ pub fn readlink(p: &Path) -> io::Result<PathBuf> {
     }
 }
 
-#[cfg(target_os = "freertos")]
-pub fn symlink(_src: &Path, _dst: &Path) -> io::Result<()> {
-    crate::sys::unsupported()
-}
-
-#[cfg(not(target_os = "freertos"))]
 pub fn symlink(src: &Path, dst: &Path) -> io::Result<()> {
     let src = cstr(src)?;
     let dst = cstr(dst)?;
@@ -1150,12 +1120,6 @@ pub fn stat(p: &Path) -> io::Result<FileAttr> {
     Ok(FileAttr::from_stat64(stat))
 }
 
-#[cfg(target_os = "freertos")]
-pub fn lstat(_p: &Path) -> io::Result<FileAttr> {
-    crate::sys::unsupported()
-}
-
-#[cfg(not(target_os = "freertos"))]
 pub fn lstat(p: &Path) -> io::Result<FileAttr> {
     let p = cstr(p)?;
 
@@ -1175,12 +1139,6 @@ pub fn lstat(p: &Path) -> io::Result<FileAttr> {
     Ok(FileAttr::from_stat64(stat))
 }
 
-#[cfg(target_os = "freertos")]
-pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
-    crate::sys::unsupported()
-}
-
-#[cfg(not(target_os = "freertos"))]
 pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
     let path = CString::new(p.as_os_str().as_bytes())?;
     let buf;
