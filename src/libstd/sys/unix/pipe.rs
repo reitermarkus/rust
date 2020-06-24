@@ -1,7 +1,7 @@
 use crate::io::{self, IoSlice, IoSliceMut};
 use crate::mem;
 use crate::sys::fd::FileDesc;
-use crate::sys::{cvt, cvt_r};
+use crate::sys::cvt_r;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Anonymous pipes
@@ -16,6 +16,7 @@ pub fn anon_pipe() -> io::Result<(AnonPipe, AnonPipe)> {
 
 #[cfg(not(target_os = "freertos"))]
 pub fn anon_pipe() -> io::Result<(AnonPipe, AnonPipe)> {
+    use crate::sys::cvt;
     use crate::sync::atomic::{AtomicBool, Ordering};
     use libc::c_int;
 

@@ -52,12 +52,6 @@ impl<F> Weak<F> {
     }
 }
 
-#[cfg(target_os = "freertos")]
-unsafe fn fetch(_name: &str) -> usize {
-    0
-}
-
-#[cfg(not(target_os = "freertos"))]
 unsafe fn fetch(name: &str) -> usize {
     use crate::ffi::CStr;
 

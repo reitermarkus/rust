@@ -66,13 +66,13 @@ impl ExitStatus {
 }
 
 impl From<c_int> for ExitStatus {
-    fn from(a: c_int) -> ExitStatus {
+    fn from(_a: c_int) -> ExitStatus {
         unimplemented!()
     }
 }
 
 impl fmt::Display for ExitStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {}
     }
 }

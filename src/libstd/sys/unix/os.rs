@@ -70,7 +70,7 @@ pub fn errno() -> i32 {
 }
 
 /// Sets the platform-specific value of errno
-#[cfg(all(not(target_os = "linux"), not(target_os = "dragonfly")))] // needed for readdir and syscall!
+#[cfg(all(not(target_os = "linux"), not(target_os = "dragonfly"), not(target_os = "freertos")))] // needed for readdir and syscall!
 pub fn set_errno(e: i32) {
     unsafe { *errno_location() = e as c_int }
 }

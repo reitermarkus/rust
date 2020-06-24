@@ -837,17 +837,12 @@ impl File {
         }
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn truncate(&self, _size: u64) -> io::Result<()> {
-        crate::sys::unsupported()
-    }
-
     #[cfg(target_os = "android")]
     pub fn truncate(&self, size: u64) -> io::Result<()> {
         crate::sys::android::ftruncate64(self.0.raw(), size)
     }
 
-    #[cfg(not(any(target_os = "android", target_os = "freertos")))]
+    #[cfg(not(target_os = "android"))]
     pub fn truncate(&self, size: u64) -> io::Result<()> {
         use crate::convert::TryInto;
         let size: off64_t =
@@ -917,12 +912,6 @@ impl File {
         self.0
     }
 
-    #[cfg(target_os = "freertos")]
-    pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
-        crate::sys::unsupported()
-    }
-
-    #[cfg(not(target_os = "freertos"))]
     pub fn set_permissions(&self, perm: FilePermissions) -> io::Result<()> {
         cvt_r(|| unsafe { libc::fchmod(self.0.raw(), perm.mode) })?;
         Ok(())

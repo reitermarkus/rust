@@ -7,10 +7,8 @@ use crate::sync::{
     Arc,
 };
 use crate::sys::mutex::Mutex;
+use crate::sys::{ffi::*, stack_overflow, thread_local};
 use crate::time::Duration;
-
-use crate::sys::ffi::*;
-use crate::sys::thread_local;
 
 const PENDING: u8 = 0;
 const RUNNING: u8 = 1;
@@ -73,6 +71,8 @@ impl Thread {
         extern "C" fn thread_start(arg: *mut libc::c_void) -> *mut libc::c_void {
             unsafe {
                 let previous_state = {
+                    let _handler = stack_overflow::Handler::new();
+
                     let (join_mutex, state, main) =
                         *Box::from_raw(arg as *mut (Arc<Mutex>, Arc<AtomicU8>, Box<dyn FnOnce()>));
 
@@ -124,7 +124,7 @@ impl Thread {
             }
 
             let mut micros = cmp::max(1_000, nanos) / 1_000;
-            let amt = (micros % 1_000);
+            let amt = micros % 1_000;
 
             if amt > 0 {
                 micros -= amt;

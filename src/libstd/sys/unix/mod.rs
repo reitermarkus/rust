@@ -39,6 +39,7 @@ pub use crate::os::solaris as platform;
 pub use self::rand::hashmap_random_keys;
 pub use libc::strlen;
 
+#[cfg(not(target_os = "freertos"))]
 #[macro_use]
 pub mod weak;
 
