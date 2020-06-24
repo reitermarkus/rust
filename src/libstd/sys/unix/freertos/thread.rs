@@ -82,7 +82,7 @@ impl Thread {
                     main();
                     thread_local::cleanup();
 
-                    let previous_state = state.swap(EXITED, SeqCst);
+                    let previous_state = state.compare_and_swap(RUNNING, EXITED, SeqCst);
 
                     join_mutex.unlock();
 
