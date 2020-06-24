@@ -38,7 +38,7 @@ impl Thread {
         let join_mutex = Arc::new(Mutex::new());
         let state = Arc::new(AtomicU8::new(PENDING));
 
-        let arg = box (join_mutex.clone(), state.clone(), p);
+        let arg = box (Arc::clone(&join_mutex), Arc::clone(&state), p);
 
         let name = name.unwrap_or_else(|| CStr::from_bytes_with_nul_unchecked(b"\0"));
 
@@ -56,9 +56,7 @@ impl Thread {
         );
 
         if res != pdTRUE {
-            if thread.state.load(SeqCst) == PENDING {
-                drop(Box::from_raw(arg));
-            }
+            drop(Box::from_raw(arg));
 
             if res == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY {
                 return Err(io::Error::new(
@@ -79,8 +77,7 @@ impl Thread {
                         *Box::from_raw(arg as *mut (Arc<Mutex>, Arc<AtomicU8>, Box<dyn FnOnce()>));
 
                     join_mutex.lock();
-
-                    state.store(RUNNING, SeqCst);
+                    state.compare_and_swap(PENDING, RUNNING, SeqCst);
 
                     main();
                     thread_local::cleanup();
@@ -160,7 +157,9 @@ impl Thread {
         unsafe {
             assert!(self.id != xTaskGetCurrentTaskHandle());
 
-            while self.state.load(SeqCst) == PENDING {}
+            while self.state.load(SeqCst) == PENDING {
+                Self::yield_now()
+            }
 
             // Just wait for the thread to finish, the rest is handled by `Drop`.
             self.join_mutex.lock();
