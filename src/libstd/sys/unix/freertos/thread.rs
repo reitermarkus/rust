@@ -144,7 +144,8 @@ impl Thread {
         }
 
         let tick_rate = unsafe { xPortGetTickRateHz() } as u128;
-        let mut ticks_to_delay = ((millis + 1) * tick_rate - 1) / tick_rate;
+        let ms_per_tick = 1000 / tick_rate;
+        let mut ticks_to_delay = (millis + ms_per_tick - 1) / ms_per_tick;
 
         while ticks_to_delay > 0 {
             let amt = cmp::min(u32::max_value() as u128, ticks_to_delay);
