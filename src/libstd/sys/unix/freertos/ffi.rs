@@ -14,7 +14,6 @@ pub const pdFALSE: BaseType_t = 0;
 pub const pdTRUE: BaseType_t = 1;
 pub const semGIVE_BLOCK_TIME: TickType_t = 0;
 pub const queueSEND_TO_BACK: BaseType_t = 0;
-const tskNO_AFFINITY: BaseType_t = BaseType_t::max_value();
 pub const errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY: BaseType_t = -1;
 
 extern "C" {
@@ -77,6 +76,7 @@ pub unsafe fn xTaskCreate(
     uxPriority: UBaseType_t,
     pxCreatedTask: *mut TaskHandle_t,
 ) -> BaseType_t {
+    const tskNO_AFFINITY: BaseType_t = BaseType_t::max_value();
     xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, tskNO_AFFINITY)
 }
 
