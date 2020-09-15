@@ -1,6 +1,32 @@
-<a href = "https://www.rust-lang.org/">
-<img width = "90%" height = "auto" src = "https://img.shields.io/badge/Rust-Programming%20Language-black?style=flat&logo=rust" alt = "The Rust Programming Language">
-</a>
+# The Rust Programming Language For Xtensa processors
+
+This fork enables projects to be built for the ESP32 and ESP8266 using [espressif's llvm fork](https://github.com/espressif/llvm-project). The [esp-rs](https://github.com/esp-rs) organization has been formed to develop runtime, pac and hal crates for the esp32 and eventually esp8266.
+
+Join in on the discussion: https://matrix.to/#/#esp-rs:matrix.org!
+
+## Using this fork
+
+The [quickstart repo](https://github.com/MabezDev/xtensa-rust-quickstart) has more information on how to build this fork and use it to build xtensa compatible code.
+
+This is the main source code repository for [Rust]. It contains the compiler,
+standard library, and documentation. 
+
+To build this fork and have xtensa support, you need to make sure you pass in the --experimental-targets=Xtensa to configure as follows:
+```sh
+$ git clone https://github.com/MabezDev/rust-xtensa
+$ cd rust-xtensa
+$ ./configure --experimental-targets=Xtensa
+$ ./x.py build
+```
+
+## Updating this fork
+
+The patch set can be found [here](https://github.com/MabezDev/rust-xtensa-patches). Checkout from upstream/master, apply the patches, fixing any conflicts if necessary (remember to PR the changes back to the patches [repo]((https://github.com/MabezDev/rust-xtensa-patches))). Once it builds submit a PR against this repo with the branch name `xtensa-update-$DATE`.
+
+Once accepted, the new branch will be renamed `xtensa-target`, hence making it the default.
+Don't worry about the README changes, I will port those across once I accept the PR.
+
+---
 
 This is the main source code repository for [Rust]. It contains the compiler,
 standard library, and documentation.
