@@ -16,7 +16,7 @@ To build this fork and have xtensa support, you need to make sure you pass in th
 $ git clone https://github.com/MabezDev/rust-xtensa
 $ cd rust-xtensa
 $ ./configure --experimental-targets=Xtensa
-$ ./x.py build
+$ ./x.py build --stage 2
 ```
 
 ## Updating this fork
