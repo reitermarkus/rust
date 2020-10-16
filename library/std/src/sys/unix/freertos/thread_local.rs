@@ -1,6 +1,7 @@
 use crate::collections::{LinkedList, BTreeMap};
 use crate::ptr;
 use crate::sys::ffi::*;
+use crate::sys_common::rwlock::RWLock;
 
 pub type Key = usize;
 pub type Tls = BTreeMap<Key, *mut u8>;

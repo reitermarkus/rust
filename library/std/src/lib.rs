@@ -270,6 +270,7 @@
 #![feature(lang_items)]
 #![feature(libc)]
 #![feature(link_args)]
+#![feature(linked_list_remove)]
 #![feature(linkage)]
 #![feature(llvm_asm)]
 #![feature(log_syntax)]

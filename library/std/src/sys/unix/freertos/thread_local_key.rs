@@ -1,5 +1,4 @@
 use crate::ptr;
-use crate::sys_common::rwlock::RWLock;
 
 mod thread_local;
 use thread_local::{Tls, LOCK, KEYS, get_tls, set_tls};
