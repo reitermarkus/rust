@@ -7,7 +7,7 @@ use crate::sync::{
     Arc,
 };
 use crate::sys::mutex::Mutex;
-use crate::sys::{ffi::*, stack_overflow, thread_local};
+use crate::sys::{ffi::*, stack_overflow, thread_local_dtor};
 use crate::time::Duration;
 
 const PENDING: u8 = 0;
@@ -80,7 +80,7 @@ impl Thread {
                     state.compare_and_swap(PENDING, RUNNING, SeqCst);
 
                     main();
-                    thread_local::cleanup();
+                    thread_local_dtor::run_dtors();
 
                     let previous_state = state.compare_and_swap(RUNNING, EXITED, SeqCst);
 

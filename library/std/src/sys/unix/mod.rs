@@ -75,10 +75,10 @@ pub mod stack_overflow;
 pub mod stdio;
 #[cfg_attr(target_os = "freertos", path = "freertos/thread.rs")]
 pub mod thread;
+#[cfg_attr(target_os = "freertos", path = "freertos/thread_local_dtor.rs")]
 pub mod thread_local_dtor;
+#[cfg_attr(target_os = "freertos", path = "freertos/thread_local_key.rs")]
 pub mod thread_local_key;
-#[cfg_attr(target_os = "freertos", path = "freertos/thread_local.rs")]
-pub mod thread_local;
 pub mod time;
 
 #[cfg(target_os = "freertos")]
