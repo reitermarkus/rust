@@ -26,6 +26,11 @@ use crate::vec;
 
 use libc::{c_char, c_int, c_void};
 
+#[cfg(target_os = "none")]
+#[path = "../unsupported/common.rs"]
+#[deny(unsafe_op_in_unsafe_fn)]
+mod unsupported;
+
 const TMPBUF_SZ: usize = 128;
 
 cfg_if::cfg_if! {
@@ -43,7 +48,7 @@ extern "C" {
             target_os = "linux",
             target_os = "emscripten",
             target_os = "fuchsia",
-            target_os = "l4re"
+            target_os = "l4re",
         ),
         link_name = "__errno_location"
     )]
@@ -131,6 +136,12 @@ pub fn error_string(errno: i32) -> String {
     }
 }
 
+#[cfg(target_os = "none")]
+pub fn getcwd() -> io::Result<PathBuf> {
+    Ok(PathBuf::from("/"))
+}
+
+#[cfg(not(target_os = "none"))]
 pub fn getcwd() -> io::Result<PathBuf> {
     let mut buf = Vec::with_capacity(512);
     loop {
@@ -157,6 +168,12 @@ pub fn getcwd() -> io::Result<PathBuf> {
     }
 }
 
+#[cfg(target_os = "none")]
+pub fn chdir(p: &path::Path) -> io::Result<()> {
+    Err(unsupported::unsupported_err())
+}
+
+#[cfg(not(target_os = "none"))]
 pub fn chdir(p: &path::Path) -> io::Result<()> {
     let p: &OsStr = p.as_ref();
     let p = CString::new(p.as_bytes())?;
@@ -570,8 +587,14 @@ pub fn unsetenv(n: &OsStr) -> io::Result<()> {
     }
 }
 
+#[cfg(not(target_os = "none"))]
 pub fn page_size() -> usize {
     unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize }
+}
+
+#[cfg(target_os = "none")]
+pub fn page_size() -> usize {
+    32
 }
 
 pub fn temp_dir() -> PathBuf {
@@ -588,6 +611,7 @@ pub fn home_dir() -> Option<PathBuf> {
     return crate::env::var_os("HOME").or_else(|| unsafe { fallback() }).map(PathBuf::from);
 
     #[cfg(any(
+        target_os = "none",
         target_os = "android",
         target_os = "ios",
         target_os = "emscripten",
@@ -598,6 +622,7 @@ pub fn home_dir() -> Option<PathBuf> {
         None
     }
     #[cfg(not(any(
+        target_os = "none",
         target_os = "android",
         target_os = "ios",
         target_os = "emscripten",
@@ -671,4 +696,9 @@ fn parse_glibc_version(version: &str) -> Option<(usize, usize)> {
         (Some(Ok(major)), Some(Ok(minor))) => Some((major, minor)),
         _ => None,
     }
+}
+
+#[cfg(target_os = "none")]
+pub fn current_exe() -> io::Result<PathBuf> {
+    unsupported::unsupported()
 }

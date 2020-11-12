@@ -30,7 +30,8 @@ impl Condvar {
         target_os = "ios",
         target_os = "l4re",
         target_os = "android",
-        target_os = "redox"
+        target_os = "redox",
+        target_os = "none"
     ))]
     pub unsafe fn init(&mut self) {}
 
@@ -39,7 +40,8 @@ impl Condvar {
         target_os = "ios",
         target_os = "l4re",
         target_os = "android",
-        target_os = "redox"
+        target_os = "redox",
+        target_os = "none"
     )))]
     pub unsafe fn init(&mut self) {
         use crate::mem::MaybeUninit;

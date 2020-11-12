@@ -70,5 +70,7 @@ pub mod solaris;
 pub mod vxworks;
 #[cfg(target_os = "wasi")]
 pub mod wasi;
+#[cfg(all(target_os = "none", target_env = "newlib", target_vendor = "espressif"))]
+pub mod none;
 
 pub mod raw;

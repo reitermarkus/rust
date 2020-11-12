@@ -33,15 +33,19 @@ pub use crate::os::openbsd as platform;
 pub use crate::os::redox as platform;
 #[cfg(all(not(doc), target_os = "solaris"))]
 pub use crate::os::solaris as platform;
+#[cfg(all(not(doc), all(target_os = "none", target_env = "newlib")))]
+pub use crate::os::none as platform;
 
 pub use self::rand::hashmap_random_keys;
 pub use libc::strlen;
 
+#[cfg(not(target_os = "none"))]
 #[macro_use]
 pub mod weak;
 
 pub mod alloc;
 pub mod android;
+#[cfg_attr(target_os = "none", path = "../unsupported/args.rs")]
 pub mod args;
 pub mod cmath;
 pub mod condvar;
@@ -59,6 +63,8 @@ pub mod memchr;
 pub mod mutex;
 #[cfg(not(target_os = "l4re"))]
 pub mod net;
+#[cfg(all(target_os = "none", target_env = "newlib", target_vendor = "espressif"))]
+mod net_lwip;
 #[cfg(target_os = "l4re")]
 pub use self::l4re::net;
 pub mod os;
@@ -66,6 +72,7 @@ pub mod path;
 pub mod pipe;
 pub mod process;
 pub mod rand;
+#[cfg_attr(target_env = "newlib", path = "../wasm/rwlock_atomics.rs")]
 pub mod rwlock;
 pub mod stack_overflow;
 pub mod stdio;
@@ -76,7 +83,11 @@ pub mod time;
 
 pub use crate::sys_common::os_str_bytes as os_str;
 
-#[cfg(not(test))]
+#[cfg(all(not(test), target_os = "none"))]
+pub fn init() {
+}
+
+#[cfg(all(not(test), not(target_os = "none")))]
 pub fn init() {
     // The standard streams might be closed on application startup. To prevent
     // std::io::{stdin, stdout,stderr} objects from using other unrelated file

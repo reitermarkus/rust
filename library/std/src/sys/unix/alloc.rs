@@ -85,6 +85,11 @@ cfg_if::cfg_if! {
         unsafe fn aligned_malloc(layout: &Layout) -> *mut u8 {
             libc::aligned_alloc(layout.align(), layout.size()) as *mut u8
         }
+    } else if #[cfg(target_arch = "xtensa")] {
+        #[inline]
+        unsafe fn aligned_malloc(layout: &Layout) -> *mut u8 {
+            libc::malloc(layout.size()) as *mut u8
+        }
     } else {
         #[inline]
         unsafe fn aligned_malloc(layout: &Layout) -> *mut u8 {
