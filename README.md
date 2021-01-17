@@ -21,7 +21,15 @@ $ ./x.py build --stage 2
 
 ## Updating this fork
 
-The patch set can be found [here](https://github.com/MabezDev/rust-xtensa-patches). Checkout from upstream/master, apply the patches, fixing any conflicts if necessary (remember to PR the changes back to the patches [repo]((https://github.com/MabezDev/rust-xtensa-patches))). Once it builds submit a PR against this repo with the branch name `xtensa-update-$DATE`.
+The patch set can be found [here](https://github.com/MabezDev/rust-xtensa-patches). Checkout from upstream/master, apply the patches on at a time using `git am -3 < path/to/patch.patch`, fixing any conflicts if necessary (remember to PR the changes back to the patches [repo]((https://github.com/MabezDev/rust-xtensa-patches))). Once it builds submit a PR against this repo with the branch name `xtensa-update-$DATE`. 
+
+If the llvm submodule needs to be updated, the following should work:
+
+```bash
+git submodule set-url src/llvm-project https://github.com/espressif/llvm-project
+git submodule set-branch -b $BRANCH_NAME src/llvm-project
+git submodule update --init --recursive --remote src/llvm-project
+```
 
 Once accepted, the new branch will be renamed `xtensa-target`, hence making it the default.
 Don't worry about the README changes, I will port those across once I accept the PR.
