@@ -109,8 +109,8 @@ pub fn init() {
     }
 
     cfg_if::cfg_if! {
-        if #[cfg(miri)] {
-            // The standard fds are always available in Miri.
+        if #[cfg(any(target_os = "miri", target_os = "freertos"))] {
+            // The standard fds are always available in Miri and FreeRTOS.
             unsafe fn sanitize_standard_fds() {}
         } else if #[cfg(not(any(
             target_os = "emscripten",
