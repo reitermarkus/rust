@@ -1,4 +1,4 @@
-use crate::collections::{LinkedList, BTreeMap};
+use crate::collections::{BTreeMap, LinkedList};
 use crate::ptr;
 use crate::sys::ffi::*;
 use crate::sys_common::rwlock::RWLock;

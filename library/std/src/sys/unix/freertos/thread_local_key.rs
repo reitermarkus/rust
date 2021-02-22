@@ -1,7 +1,7 @@
 use crate::ptr;
 
 mod thread_local;
-use thread_local::{Tls, LOCK, KEYS, get_tls, set_tls};
+use thread_local::{get_tls, set_tls, Tls, KEYS, LOCK};
 
 pub use thread_local::Key;
 
