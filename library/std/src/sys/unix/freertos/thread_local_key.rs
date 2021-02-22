@@ -25,7 +25,7 @@ pub unsafe fn set(key: Key, value: *mut u8) {
 
         let mut found = false;
 
-        for (k, _) in KEYS.iter() {
+        for &(k, _) in KEYS.iter() {
             if k == key {
                 found = true;
                 break;
@@ -36,7 +36,6 @@ pub unsafe fn set(key: Key, value: *mut u8) {
 
         LOCK.read_unlock();
     }
-
 
     let tls = if let Some(tls) = get_tls().as_mut() {
         tls
