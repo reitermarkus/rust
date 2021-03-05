@@ -144,7 +144,7 @@ impl Socket {
         }
     }
 
-    #[cfg(not(any(target_os = "freertos", target_os = "vxworks"))]
+    #[cfg(not(any(target_os = "freertos", target_os = "vxworks")))]
     pub fn new_pair(fam: c_int, ty: c_int) -> io::Result<(Socket, Socket)> {
         unsafe {
             let mut fds = [0, 0];
@@ -174,7 +174,7 @@ impl Socket {
         }
     }
 
-    #[cfg(target_os = "vxworks")]
+    #[cfg(any(target_os = "freertos", target_os = "vxworks"))]
     pub fn new_pair(_fam: c_int, _ty: c_int) -> io::Result<(Socket, Socket)> {
         unimplemented!()
     }
@@ -263,7 +263,7 @@ impl Socket {
                 let fd = cvt_r(|| unsafe {
                     netc::accept4(self.0.raw(), storage, len, netc::SOCK_CLOEXEC)
                 })?;
-                Ok(Socket(FileDesc::new(fd)))
+                Ok(Socket(NetFileDesc::new(fd)))
             // While the Android kernel supports the syscall,
             // it is not included in all versions of Android's libc.
             } else if #[cfg(target_os = "android")] {
