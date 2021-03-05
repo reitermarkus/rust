@@ -10,6 +10,8 @@ pub struct Condvar {
     waiter_list: UnsafeCell<Option<VecDeque<SemaphoreHandle_t>>>,
 }
 
+pub type MovableCondvar = Condvar;
+
 unsafe impl Send for Condvar {}
 unsafe impl Sync for Condvar {}
 

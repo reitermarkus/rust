@@ -77,12 +77,15 @@ impl Thread {
                         *Box::from_raw(arg as *mut (Arc<Mutex>, Arc<AtomicU8>, Box<dyn FnOnce()>));
 
                     join_mutex.lock();
-                    state.compare_and_swap(PENDING, RUNNING, SeqCst);
+                    let _ = state.compare_exchange(PENDING, RUNNING, SeqCst, SeqCst);
 
                     main();
                     thread_local_dtor::run_dtors();
 
-                    let previous_state = state.compare_and_swap(RUNNING, EXITED, SeqCst);
+                    let previous_state = match state.compare_exchange(RUNNING, EXITED, SeqCst, SeqCst) {
+                      Ok(v) => v,
+                      Err(v) => v,
+                    };
 
                     join_mutex.unlock();
 

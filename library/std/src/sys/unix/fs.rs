@@ -1108,8 +1108,8 @@ pub fn link(original: &Path, link: &Path) -> io::Result<()> {
     let original = cstr(original)?;
     let link = cstr(link)?;
     cfg_if::cfg_if! {
-        if #[cfg(any(target_os = "vxworks", target_os = "redox", target_os = "android"))] {
-            // VxWorks, Redox, and old versions of Android lack `linkat`, so use
+        if #[cfg(any(target_os = "vxworks", target_os = "freertos", target_os = "redox", target_os = "android"))] {
+            // VxWorks, FreeRTOS, Redox, and old versions of Android lack `linkat`, so use
             // `link` instead. POSIX leaves it implementation-defined whether
             // `link` follows symlinks, so rely on the `symlink_hard_link` test
             // in library/std/src/fs/tests.rs to check the behavior.
