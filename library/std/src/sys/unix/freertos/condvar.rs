@@ -128,12 +128,12 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn destroy(&self) {
-      #[cfg(debug)]
+      #[cfg(debug_assertions)]
       {
         self.lock.lock();
 
         if let Some(waiter_list) = (&*self.waiter_list.get()).as_mut() {
-            debug_assert!(waiter_list.is_empty());
+            assert!(waiter_list.is_empty());
         } else {
             core::hint::unreachable_unchecked();
         }
