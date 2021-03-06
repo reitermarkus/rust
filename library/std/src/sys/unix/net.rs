@@ -17,7 +17,7 @@ pub mod netc {
     #[cfg(target_os = "freertos")]
     extern "C" {
         #[link_name = "lwip_fcntl"]
-        pub fn fcntl(s: c_int, cmd: c_int, val: c_int) -> c_int;
+        pub fn fcntl(s: c_int, cmd: c_int, ...) -> c_int;
         #[link_name = "lwip_close"]
         pub fn close(s: c_int) -> ssize_t;
         #[link_name = "lwip_read"]
