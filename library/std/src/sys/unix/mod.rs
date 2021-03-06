@@ -69,7 +69,9 @@ pub use self::l4re::net;
 pub mod net_fd;
 pub mod os;
 pub mod path;
+#[cfg_attr(target_os = "freertos", path = "../unsupported/pipe.rs")]
 pub mod pipe;
+#[cfg_attr(target_os = "freertos", path = "../unsupported/process.rs")]
 pub mod process;
 pub mod rand;
 #[cfg_attr(target_os = "freertos", path = "../wasm/rwlock_atomics.rs")]
@@ -252,6 +254,7 @@ where
     }
 }
 
+#[cfg(not(target_os = "freertos"))]
 pub fn cvt_nz(error: libc::c_int) -> crate::io::Result<()> {
     if error == 0 { Ok(()) } else { Err(crate::io::Error::from_raw_os_error(error)) }
 }
