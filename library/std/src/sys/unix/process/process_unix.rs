@@ -22,7 +22,7 @@ impl Command {
         default: Stdio,
         needs_stdin: bool,
     ) -> io::Result<(Process, StdioPipes)> {
-        const CLOEXEC_MSG_FOOTER: &[u8] = b"NOEX";
+        const CLOEXEC_MSG_FOOTER: [u8; 4] = *b"NOEX";
 
         let envp = self.capture_env();
 
