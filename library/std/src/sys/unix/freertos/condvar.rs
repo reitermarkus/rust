@@ -17,8 +17,6 @@ unsafe impl Sync for Condvar {}
 
 impl Condvar {
     pub const fn new() -> Condvar {
-        // Might be moved and address is changing it is better to avoid
-        // initialization of potentially opaque OS data before it landed
         Condvar {
             lock: unsafe { ReentrantMutex::uninitialized() },
             waiter_list: UnsafeCell::new(None),
@@ -26,23 +24,20 @@ impl Condvar {
     }
 
     #[inline]
-    pub unsafe fn init(&mut self) {}
-
-    #[inline]
-    unsafe fn init_waiter_list(&self) {
-        if (*self.waiter_list.get()).is_none() {
-            (*self.waiter_list.get()) = Some(VecDeque::new());
-        }
+    pub unsafe fn init(&mut self) {
+        self.waiter_list.get_mut().replace(VecDeque::new());
     }
 
     #[inline]
     pub unsafe fn notify_one(&self) {
         self.lock.lock();
 
-        self.init_waiter_list();
-        let waiter_list = (&*self.waiter_list.get()).as_ref().unwrap();
-        if let Some(&waiter) = waiter_list.front() {
-            xSemaphoreGive(waiter);
+        if let Some(waiter_list) = (&*self.waiter_list.get()).as_ref() {
+            if let Some(&waiter) = waiter_list.front() {
+                xSemaphoreGive(waiter);
+            }
+        } else {
+            core::hint::unreachable_unchecked();
         }
 
         self.lock.unlock();
@@ -52,10 +47,12 @@ impl Condvar {
     pub unsafe fn notify_all(&self) {
         self.lock.lock();
 
-        self.init_waiter_list();
-        let waiter_list = (&*self.waiter_list.get()).as_ref().unwrap();
-        for &waiter in waiter_list {
-            xSemaphoreGive(waiter);
+        if let Some(waiter_list) = (&*self.waiter_list.get()).as_ref() {
+            for &waiter in waiter_list {
+                xSemaphoreGive(waiter);
+            }
+        } else {
+            core::hint::unreachable_unchecked();
         }
 
         self.lock.unlock();
@@ -88,9 +85,11 @@ impl Condvar {
 
         self.lock.lock();
 
-        self.init_waiter_list();
-        let waiter_list = (&mut *self.waiter_list.get()).as_mut().unwrap();
-        waiter_list.push_back(waiter);
+        if let Some(waiter_list) = (&mut *self.waiter_list.get()).as_mut() {
+            waiter_list.push_back(waiter);
+        } else {
+            core::hint::unreachable_unchecked();
+        }
 
         self.lock.unlock();
 
@@ -104,18 +103,19 @@ impl Condvar {
 
         self.lock.lock();
 
-        let waiter_list = (&mut *self.waiter_list.get()).as_mut().unwrap();
-        let deleted_waiter = if let Some(index) = waiter_list.iter().position(|&w| w == waiter) {
-            waiter_list.remove(index)
+        if let Some(waiter_list) = (&mut *self.waiter_list.get()).as_mut() {
+            if let Some(index) = waiter_list.iter().position(|&w| w == waiter) {
+                waiter_list.remove(index);
+            } else {
+                core::hint::unreachable_unchecked();
+            }
         } else {
-            None
-        };
+            core::hint::unreachable_unchecked();
+        }
 
         self.lock.unlock();
 
-        if let Some(deleted_waiter) = deleted_waiter {
-            vSemaphoreDelete(deleted_waiter);
-        }
+        vSemaphoreDelete(waiter);
 
         mutex.lock();
 
@@ -128,12 +128,17 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn destroy(&self) {
+      #[cfg(debug)]
+      {
         self.lock.lock();
 
-        if let Some(waiter_list) = (&*self.waiter_list.get()).as_ref() {
-            assert!(waiter_list.is_empty());
+        if let Some(waiter_list) = (&*self.waiter_list.get()).as_mut() {
+            debug_assert!(waiter_list.is_empty());
+        } else {
+            core::hint::unreachable_unchecked();
         }
 
         self.lock.unlock();
+      }
     }
 }
