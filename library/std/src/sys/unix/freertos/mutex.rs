@@ -33,7 +33,7 @@ impl Mutex {
     #[inline]
     unsafe fn atomic_init(&self) {
         loop {
-            match self.initialized.compare_exchange_weak(UNINITIALIZED, INITIALIZING, SeqCst, SeqCst) {
+            match self.initialized.compare_exchange(UNINITIALIZED, INITIALIZING, SeqCst, SeqCst) {
                 Ok(UNINITIALIZED) => {
                     *self.inner.get() = xSemaphoreCreateMutex();
                     debug_assert!(!(*self.inner.get()).is_null());
@@ -69,7 +69,7 @@ impl Mutex {
     #[inline]
     pub unsafe fn destroy(&self) {
         loop {
-            match self.initialized.compare_exchange_weak(INITIALIZED, UNINITIALIZING, SeqCst, SeqCst) {
+            match self.initialized.compare_exchange(INITIALIZED, UNINITIALIZING, SeqCst, SeqCst) {
                 Ok(INITIALIZED) => {
                     vSemaphoreDelete(*self.inner.get());
                     *self.inner.get() = ptr::null_mut();
@@ -113,7 +113,7 @@ impl ReentrantMutex {
     #[inline]
     unsafe fn atomic_init(&self) {
         loop {
-            match self.initialized.compare_exchange_weak(UNINITIALIZED, INITIALIZING, SeqCst, SeqCst) {
+            match self.initialized.compare_exchange(UNINITIALIZED, INITIALIZING, SeqCst, SeqCst) {
                 Ok(UNINITIALIZED) => {
                     *self.inner.get() = xSemaphoreCreateRecursiveMutex();
                     debug_assert!(!(*self.inner.get()).is_null());
@@ -147,7 +147,7 @@ impl ReentrantMutex {
 
     pub unsafe fn destroy(&self) {
         loop {
-            match self.initialized.compare_exchange_weak(INITIALIZED, UNINITIALIZING, SeqCst, SeqCst) {
+            match self.initialized.compare_exchange(INITIALIZED, UNINITIALIZING, SeqCst, SeqCst) {
                 Ok(INITIALIZED) => {
                     vSemaphoreDelete(*self.inner.get());
                     *self.inner.get() = ptr::null_mut();
