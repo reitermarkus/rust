@@ -25,7 +25,8 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn init(&mut self) {
-        self.waiter_list.get_mut().replace(VecDeque::new());
+        // This must stay empty since `RWLock` uses a `Condvar`
+        // internally which cannot be mutated.
     }
 
     #[inline]
@@ -36,8 +37,6 @@ impl Condvar {
             if let Some(&waiter) = waiter_list.front() {
                 xSemaphoreGive(waiter);
             }
-        } else {
-            core::hint::unreachable_unchecked();
         }
 
         self.lock.unlock();
@@ -51,8 +50,6 @@ impl Condvar {
             for &waiter in waiter_list {
                 xSemaphoreGive(waiter);
             }
-        } else {
-            core::hint::unreachable_unchecked();
         }
 
         self.lock.unlock();
@@ -85,11 +82,8 @@ impl Condvar {
 
         self.lock.lock();
 
-        if let Some(waiter_list) = (&mut *self.waiter_list.get()).as_mut() {
-            waiter_list.push_back(waiter);
-        } else {
-            core::hint::unreachable_unchecked();
-        }
+        let waiter_list = (&mut *self.waiter_list.get()).get_or_insert_with(|| VecDeque::new());
+        waiter_list.push_back(waiter);
 
         self.lock.unlock();
 
@@ -103,19 +97,14 @@ impl Condvar {
 
         self.lock.lock();
 
-        if let Some(waiter_list) = (&mut *self.waiter_list.get()).as_mut() {
-            if let Some(index) = waiter_list.iter().position(|&w| w == waiter) {
-                waiter_list.remove(index);
-            } else {
-                core::hint::unreachable_unchecked();
-            }
+        if let Some(index) = waiter_list.iter().position(|&w| w == waiter) {
+            waiter_list.remove(index);
+            vSemaphoreDelete(waiter);
         } else {
             core::hint::unreachable_unchecked();
         }
 
         self.lock.unlock();
-
-        vSemaphoreDelete(waiter);
 
         mutex.lock();
 
@@ -128,17 +117,15 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn destroy(&self) {
-      #[cfg(debug_assertions)]
-      {
-        self.lock.lock();
+        #[cfg(debug_assertions)]
+        {
+            self.lock.lock();
 
-        if let Some(waiter_list) = (&*self.waiter_list.get()).as_mut() {
-            assert!(waiter_list.is_empty());
-        } else {
-            core::hint::unreachable_unchecked();
+            if let Some(waiter_list) = (&*self.waiter_list.get()).as_ref() {
+                assert!(waiter_list.is_empty());
+            }
+
+            self.lock.unlock();
         }
-
-        self.lock.unlock();
-      }
     }
 }
