@@ -23,16 +23,7 @@ pub unsafe fn set(key: Key, value: *mut u8) {
     {
         LOCK.read();
 
-        let mut found = false;
-
-        for &(k, _) in KEYS.iter() {
-            if k == key {
-                found = true;
-                break;
-            }
-        }
-
-        assert!(found);
+        assert!(KEYS.iter().any(|&(k, _)| k == key));
 
         LOCK.read_unlock();
     }
@@ -65,22 +56,11 @@ pub unsafe fn get(key: Key) -> *mut u8 {
 pub unsafe fn destroy(key: Key) {
     LOCK.write();
 
-    let mut i = 0;
-    let mut found = false;
-
-    for &(k, _) in KEYS.iter() {
-        if k == key {
-            found = true;
-            break;
-        }
-
-        i += 1;
-    }
-
-    debug_assert!(found);
-
-    if found {
+    if let Some(i) = KEYS.iter().position(|&(k, _)| k == key) {
         KEYS.remove(i);
+    } else {
+      debug_assert!(false);
+      core::hint::unreachable_unchecked();
     }
 
     LOCK.write_unlock();
