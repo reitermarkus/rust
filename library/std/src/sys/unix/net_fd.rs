@@ -195,6 +195,7 @@ impl NetFileDesc {
     pub fn get_cloexec(&self) -> io::Result<bool> {
         unsafe { Ok((cvt(netc::fcntl(self.fd, netc::F_GETFD))? & netc::FD_CLOEXEC) != 0) }
     }
+
     // Setting `FD_CLOEXEC` is not supported on FreeRTOS
     // since there is no `exec` functionality.
     #[cfg(target_os = "freertos")]
