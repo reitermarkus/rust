@@ -54,8 +54,8 @@ unsafe impl GlobalAlloc for System {
 
 cfg_if::cfg_if! {
     if #[cfg(any(
+        target_env = "newlib",
         target_os = "android",
-        target_os = "freertos",
         target_os = "illumos",
         target_os = "redox",
         target_os = "solaris"
