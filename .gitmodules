@@ -47,4 +47,3 @@
 [submodule "library/backtrace"]
 	path = library/backtrace
 	url = https://github.com/ivmarkov/backtrace-rs.git
-	branch = esp-idf
