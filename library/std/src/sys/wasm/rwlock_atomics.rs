@@ -111,7 +111,7 @@ impl RWLock {
     #[inline]
     unsafe fn initialize(&self) {
         if (!*self.initialized.get()) {
-            //(*self.cond.get()).init();
+            (*self.cond.get()).init();
             *self.initialized.get() = true;
         }
     }
