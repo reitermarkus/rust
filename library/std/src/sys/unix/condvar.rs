@@ -34,7 +34,9 @@ impl Condvar {
     ))]
     pub unsafe fn init(&mut self) {}
 
-    #[cfg(target_os = "none")]
+    // NOTE: ESP-IDF does not support PTHREAD_COND_INITIALIZER
+    // So on that platform, init() should always be called
+    #[cfg(all(target_os = "none", target_vendor = "espressif"))]
     pub unsafe fn init(&mut self) {
         let r = libc::pthread_cond_init(self.inner.get(), crate::ptr::null());
         assert_eq!(r, 0);
@@ -46,7 +48,7 @@ impl Condvar {
         target_os = "l4re",
         target_os = "android",
         target_os = "redox",
-        target_os = "none"
+        all(target_os = "none", target_vendor = "espressif")
     )))]
     pub unsafe fn init(&mut self) {
         use crate::mem::MaybeUninit;
@@ -75,7 +77,7 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn wait(&self, mutex: &Mutex) {
-        let r = libc::pthread_cond_wait(self.inner.get(), mutex::raw(mutex));
+        let r = libc::pthread_cond_wait(self.inner.get(), mutex::raw(mutex) as *mut _);
         debug_assert_eq!(r, 0);
     }
 
@@ -83,7 +85,12 @@ impl Condvar {
     // where we configure condition variable to use monotonic clock (instead of
     // default system clock). This approach avoids all problems that result
     // from changes made to the system time.
-    #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android", target_os = "none")))]
+    #[cfg(not(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "android",
+        all(target_os = "none", target_vendor = "espressif")
+    )))]
     pub unsafe fn wait_timeout(&self, mutex: &Mutex, dur: Duration) -> bool {
         use crate::mem;
 
@@ -110,7 +117,12 @@ impl Condvar {
     // This implementation is modeled after libcxx's condition_variable
     // https://github.com/llvm-mirror/libcxx/blob/release_35/src/condition_variable.cpp#L46
     // https://github.com/llvm-mirror/libcxx/blob/release_35/include/__mutex_base#L367
-    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android", target_os = "none"))]
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "android",
+        all(target_os = "none", target_vendor = "espressif")
+    ))]
     pub unsafe fn wait_timeout(&self, mutex: &Mutex, mut dur: Duration) -> bool {
         use crate::ptr;
         use crate::time::Instant;
@@ -155,7 +167,7 @@ impl Condvar {
             .unwrap_or(TIMESPEC_MAX);
 
         // And wait!
-        let r = libc::pthread_cond_timedwait(self.inner.get(), mutex::raw(mutex), &timeout);
+        let r = libc::pthread_cond_timedwait(self.inner.get(), mutex::raw(mutex) as *mut _, &timeout);
         debug_assert!(r == libc::ETIMEDOUT || r == 0);
 
         // ETIMEDOUT is not a totally reliable method of determining timeout due
