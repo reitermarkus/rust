@@ -15,7 +15,7 @@ const PTHREAD_MUTEX_INITIALIZER: pthread_mutex_t = 0xffffffff;
 #[cfg(not(all(target_os = "none", target_vendor = "espressif")))]
 pub type pthread_mutex_t = libc::pthread_mutex_t;
 #[cfg(not(all(target_os = "none", target_vendor = "espressif")))]
-const PTHREAD_MUTEX_INITIALIZER: pthread_mutex_t = libc::pthread_mutex_t;
+const PTHREAD_MUTEX_INITIALIZER: pthread_mutex_t = libc::PTHREAD_MUTEX_INITIALIZER;
 
 pub struct Mutex {
     inner: UnsafeCell<pthread_mutex_t>,
