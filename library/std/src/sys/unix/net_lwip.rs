@@ -62,7 +62,7 @@ extern "C" {
 #[no_mangle] pub extern "C" fn sendto(s: libc::c_int, dataptr: *const libc::c_void, size: libc::size_t, flags: libc::c_int, to: *const libc::sockaddr, tolen: libc::socklen_t) -> libc::size_t {unsafe {lwip_sendto(s, dataptr, size, flags, to, tolen)}}
     
 #[no_mangle] pub extern "C" fn socket(domain: libc::c_int, typest: libc::c_int, protocol: libc::c_int) -> libc::c_int {unsafe {lwip_socket(domain, typest, protocol)}}
-#[no_mangle] pub extern "C" fn select(maxfdp1: libc::c_int, readset: *mut libc::fd_set, writeset: *mut libc::fd_set, exceptset: *mut libc::fd_set, timeout: *mut libc::timeval) -> libc::c_int {unsafe {lwip_select(maxfdp1, readset, writeset, exceptset, timeout)}}
+// Defined by ESP-IDF #[no_mangle] pub extern "C" fn select(maxfdp1: libc::c_int, readset: *mut libc::fd_set, writeset: *mut libc::fd_set, exceptset: *mut libc::fd_set, timeout: *mut libc::timeval) -> libc::c_int {unsafe {lwip_select(maxfdp1, readset, writeset, exceptset, timeout)}}
 #[no_mangle] pub extern "C" fn ioctlsocket(s: libc::c_int, cmd: libc::c_long, argp: *mut libc::c_void) -> libc::c_int {unsafe {lwip_ioctl(s, cmd, argp)}}
 
 #[no_mangle] pub extern "C" fn gethostbyname_r(name: *const libc::c_char, ret: *mut libc::hostent, buf: *mut libc::c_char, buflen: libc::size_t, result: *mut *mut libc::hostent, h_errnop: *mut libc::c_int) -> libc::c_int {unsafe {lwip_gethostbyname_r(name, ret, buf, buflen, result, h_errnop)}}
