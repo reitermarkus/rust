@@ -37,7 +37,7 @@
 [submodule "src/llvm-project"]
 	path = src/llvm-project
 	url = https://github.com/espressif/llvm-project
-	branch = xtensa_release_10.0.1
+	branch = xtensa_release_11.0.0
 [submodule "src/doc/embedded-book"]
 	path = src/doc/embedded-book
 	url = https://github.com/rust-embedded/book.git

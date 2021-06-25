@@ -24,17 +24,24 @@ STD for ESP **does** require the ESP-IDF toolkit and **does** call into ESP-IDF.
 
 ## Forum
 
-Rust on ESP seems to be discussed here: https://matrix.to/#/#esp-rs:matrix.org!
+Rust on ESP seems to be discussed here: https://matrix.to/#/#esp-rs:matrix.org
 
 ## ["Hello, World" demo app](https://github.com/ivmarkov/rust-esp32-std-hello)
 
 [Here](https://github.com/ivmarkov/rust-esp32-std-hello)
 
+## Installation
+
+* Espressif was kind enough to offer [pre-built binaries of this repo](https://github.com/espressif/rust-esp32-example/blob/main/docs/rust-on-xtensa.md) (including the custom Clang LLVM necessary for building the "Hello, World" demo app from above).
+* Download & install the binaries for your operating system by following the instructions in their repo.
+
+**NOTE**: The Linux binaries will **NOT** work on older operating systems, like Ubuntu 18.04 LTS. For these, you DO need to build this Rust fork and the Espressif's LLVM fork yourself as described below.
+
 ## Building
 
 Install [Rustup](https://rustup.rs/).
 
-Build using these steps (NOTE 1: building might take **close to an hour**! NOTE 2: Please use the `stable` branch, which is based on MabezDev Stable, which in turn is based on Rust 1.50.0):
+Build using these steps:
 ```sh
 $ cd <some directory where you'll keep the compiler binaries and its sources; you'll need to keep the whole GIT repo, because xargo/cargo need those when building your ESP32 crates>
 $ git clone https://github.com/ivmarkov/rust
@@ -43,6 +50,10 @@ $ git checkout stable
 $ ./configure --experimental-targets=Xtensa
 $ ./x.py build --stage 2
 ```
+
+* **NOTE 1**: Building might take **close to an hour**!
+* **NOTE 2**: Make sure you are using the `stable` GIT branch of the fork (the default), which is based on MabezDev Stable, which in turn is based on Rust 1.50.0):
+* **NOTE 3**: Do NOT rename the directory ('rust') where you've cloned the Rust fork. It must be 'rust' or you might have strange issues later on when using it. You can however place it anywhere in your file tree
 
 ### Fix toolchain vendor/ directory, so that building STD with Cargo does work
 
@@ -81,21 +92,38 @@ xtensa-esp8266-none-elf
 xtensa-none-elf
 ```
 
-### Optional steps
+## Building LLVM clang
 
-Install xargo (optional because `cargo build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort` seems to work again, given that the 'Fix toolchain vendor/ directory' step from above is performed):
-
+You'll need the custom LLVM clang based on the Espressif LLVM fork for the ["Hello, World" demo app](https://github.com/ivmarkov/rust-esp32-std-hello). Build as follows:
 ```sh
-$ cargo install xargo
+$ git clone https://github.com/espressif/llvm-project
+$ cd llvm-project
+$ mkdir build
+$ cd build
+$ cmake -G Ninja -DLLVM_ENABLE_PROJECTS='clang' -DCMAKE_BUILD_TYPE=Release ../llvm
+$ cmake --build .
+$ export PATH=`pwd`/bin:$PATH
 ```
 
-Set xargo's XARGO_RUST_SRC dir:
-
+Check that you have the custom clang on your path:
 ```sh
-export XARGO_RUST_SRC=`rustc --print sysroot`/lib/rustlib/src/rust/library
+$ which clang
+$ which llvm-config
 ```
 
-... and probably put that line at the end of `~/.profile`, `~/.bash_profile` or `~/.bashrc` but make sure it is executed **after** the modification of $PATH with `~/.cargo/bin` by Rustup
+The above should output locations pointing at your custom-built clang toolchain.
+
+**NOTE**: You might want to make the PATH modification step from above permanent. Please make sure that the custom clang compiler is the first on your PATH so that it takes precedence over any clang compiler you might have installed using your distro / OS. Otherwise, you might be greeted with a strange build error when building the ["Hello, World" demo app](https://github.com/ivmarkov/rust-esp32-std-hello):
+```
+  thread 'main' panicked at 'libclang error; possible causes include:
+  - Invalid flag syntax
+  - Unrecognized flags
+  - Invalid flag arguments
+  - File I/O errors
+  - Host vs. target architecture mismatch
+  If you encounter an error missing from this list, please file an issue or a PR!', ~/.cargo/registry/src/github.com-1ecc6299db9ec823/bindgen-0.57.0/src/ir/context.rs:531:15
+```
+
 
 ## Updating this fork
 
