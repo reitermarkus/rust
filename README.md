@@ -113,7 +113,8 @@ $ which llvm-config
 
 The above should output locations pointing at your custom-built clang toolchain.
 
-**NOTE**: You might want to make the PATH modification step from above permanent. Please make sure that the custom clang compiler is the first on your PATH so that it takes precedence over any clang compiler you might have installed using your distro / OS. Otherwise, you might be greeted with a strange build error when building the ["Hello, World" demo app](https://github.com/ivmarkov/rust-esp32-std-hello):
+* **NOTE 1**: Building LLVM clang might take **even longer** time than building the Rustc toolchain!
+* **NOTE 2**: You might want to make the PATH modification step from above permanent. Please make sure that the custom clang compiler is the first on your PATH so that it takes precedence over any clang compiler you might have installed using your distro / OS. Otherwise, you might be greeted with a strange build error when building the ["Hello, World" demo app](https://github.com/ivmarkov/rust-esp32-std-hello):
 ```
   thread 'main' panicked at 'libclang error; possible causes include:
   - Invalid flag syntax
