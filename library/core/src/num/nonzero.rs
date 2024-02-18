@@ -23,7 +23,7 @@ mod private {
 
 /// A marker trait for primitive types which can be zero.
 ///
-/// This is an implementation detail for [`NonZero<T>`](NonZero) which may disappear or be replaced at any time.
+/// This is an implementation detail for <code>[NonZero]\<T></code> which may disappear or be replaced at any time.
 #[unstable(
     feature = "nonzero_internals",
     reason = "implementation detail which may disappear or be replaced at any time",

@@ -304,7 +304,7 @@ pub trait Iterator {
     /// times until [`None`] is encountered.
     ///
     /// `advance_by(n)` will return `Ok(())` if the iterator successfully advances by
-    /// `n` elements, or a `Err(NonZeroUsize)` with value `k` if [`None`] is encountered,
+    /// `n` elements, or a `Err(NonZero<usize>)` with value `k` if [`None`] is encountered,
     /// where `k` is remaining number of steps that could not be advanced because the iterator ran out.
     /// If `self` is empty and `n` is non-zero, then this returns `Err(n)`.
     /// Otherwise, `k` is always less than `n`.
