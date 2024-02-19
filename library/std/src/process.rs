@@ -111,7 +111,7 @@ use crate::ffi::OsStr;
 use crate::fmt;
 use crate::fs;
 use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut};
-use crate::num::NonZeroI32;
+use crate::num::NonZero;
 use crate::path::Path;
 use crate::str;
 use crate::sys::pipe::{read2, AnonPipe};
@@ -1775,9 +1775,9 @@ impl ExitStatusError {
         self.code_nonzero().map(Into::into)
     }
 
-    /// Reports the exit code, if applicable, from an `ExitStatusError`, as a `NonZero`
+    /// Reports the exit code, if applicable, from an `ExitStatusError`, as a [`NonZero`].
     ///
-    /// This is exactly like [`code()`](Self::code), except that it returns a `NonZeroI32`.
+    /// This is exactly like [`code()`](Self::code), except that it returns a <code>[NonZero]<[i32]></code>.
     ///
     /// Plain `code`, returning a plain integer, is provided because it is often more convenient.
     /// The returned value from `code()` is indeed also nonzero; use `code_nonzero()` when you want
@@ -1796,7 +1796,7 @@ impl ExitStatusError {
     /// # } // cfg!(unix)
     /// ```
     #[must_use]
-    pub fn code_nonzero(&self) -> Option<NonZeroI32> {
+    pub fn code_nonzero(&self) -> Option<NonZero<i32>> {
         self.0.code()
     }
 
