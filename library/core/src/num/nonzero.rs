@@ -5,6 +5,7 @@ use crate::fmt;
 use crate::hash::{Hash, Hasher};
 use crate::intrinsics;
 use crate::marker::StructuralPartialEq;
+use crate::mem;
 use crate::ops::{BitOr, BitOrAssign, Div, Neg, Rem};
 use crate::panic::{RefUnwindSafe, UnwindSafe};
 use crate::ptr;
@@ -32,7 +33,7 @@ pub unsafe trait ZeroablePrimitive: Sized + Copy + private::Sealed {
 }
 
 macro_rules! impl_zeroable_primitive {
-    ($($NonZeroInner:ident ( $primitive:ty )),+ $(,)?) => {
+    ($($primitive:ty => #[$repr:meta] $NonZeroInner:ident ( $inner:ty )),+ $(,)?) => {
         mod private {
             #[unstable(
                 feature = "nonzero_internals",
@@ -44,7 +45,7 @@ macro_rules! impl_zeroable_primitive {
 
             $(
                 #[derive(Debug, Clone, Copy, PartialEq)]
-                #[repr(transparent)]
+                #[$repr]
                 #[rustc_layout_scalar_valid_range_start(1)]
                 #[rustc_nonnull_optimization_guaranteed]
                 #[unstable(
@@ -52,7 +53,7 @@ macro_rules! impl_zeroable_primitive {
                     reason = "implementation detail which may disappear or be replaced at any time",
                     issue = "none"
                 )]
-                pub struct $NonZeroInner($primitive);
+                pub struct $NonZeroInner($inner);
             )+
         }
 
@@ -77,19 +78,33 @@ macro_rules! impl_zeroable_primitive {
 }
 
 impl_zeroable_primitive!(
-    NonZeroU8Inner(u8),
-    NonZeroU16Inner(u16),
-    NonZeroU32Inner(u32),
-    NonZeroU64Inner(u64),
-    NonZeroU128Inner(u128),
-    NonZeroUsizeInner(usize),
-    NonZeroI8Inner(i8),
-    NonZeroI16Inner(i16),
-    NonZeroI32Inner(i32),
-    NonZeroI64Inner(i64),
-    NonZeroI128Inner(i128),
-    NonZeroIsizeInner(isize),
+    u8       => #[repr(transparent)] NonZeroU8Inner(u8),
+    u16      => #[repr(transparent)] NonZeroU16Inner(u16),
+    u32      => #[repr(transparent)] NonZeroU32Inner(u32),
+    u64      => #[repr(transparent)] NonZeroU64Inner(u64),
+    u128     => #[repr(transparent)] NonZeroU128Inner(u128),
+    usize    => #[repr(transparent)] NonZeroUsizeInner(usize),
+    i8       => #[repr(transparent)] NonZeroI8Inner(i8),
+    i16      => #[repr(transparent)] NonZeroI16Inner(i16),
+    i32      => #[repr(transparent)] NonZeroI32Inner(i32),
+    i64      => #[repr(transparent)] NonZeroI64Inner(i64),
+    i128     => #[repr(transparent)] NonZeroI128Inner(i128),
+    isize    => #[repr(transparent)] NonZeroIsizeInner(isize),
+    [u8; 1]  => #[repr(align(1))]    NonZeroByteArray1Inner(u8),
+    [u8; 2]  => #[repr(align(1))]    NonZeroByteArray2Inner(u16),
+    [u8; 4]  => #[repr(align(1))]    NonZeroByteArray4Inner(u32),
+    [u8; 8]  => #[repr(align(1))]    NonZeroByteArray8Inner(u64),
+    [u8; 16] => #[repr(align(1))]    NonZeroByteArray16Inner(u128),
 );
+
+impl NonZero<u16> {
+    /// Return the memory representation of this non-zero integer as a
+    /// non-zero byte array in big-endian (network) byte order.
+    #[unstable(feature = "generic_nonzero", issue = "120257")]
+    pub const fn to_be_bytes(self) -> NonZero<[u8; mem::size_of::<Self>()]> {
+        unsafe { NonZero::new_unchecked(self.get().to_be_bytes()) }
+    }
+}
 
 /// A value that is known not to equal zero.
 ///
