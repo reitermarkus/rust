@@ -489,6 +489,7 @@ macro_rules! nonzero_integer {
         ///
         /// [null pointer optimization]: crate::option#representation
         #[$stability]
+        #[deprecated(since = "TBD", note = "replaced by the generic `NonZero` type")]
         pub type $Ty = NonZero<$Int>;
 
         impl NonZero<$Int> {

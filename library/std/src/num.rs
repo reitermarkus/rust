@@ -27,9 +27,11 @@ pub use core::num::ZeroablePrimitive;
 pub use core::num::NonZero;
 
 #[stable(feature = "signed_nonzero", since = "1.34.0")]
+#[allow(deprecated, deprecated_in_future)]
 pub use core::num::{NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize};
 
 #[stable(feature = "nonzero", since = "1.28.0")]
+#[allow(deprecated, deprecated_in_future)]
 pub use core::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
 
 #[stable(feature = "int_error_matching", since = "1.55.0")]
