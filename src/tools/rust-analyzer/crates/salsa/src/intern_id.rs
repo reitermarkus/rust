@@ -1,4 +1,5 @@
 use std::fmt;
+#[allow(deprecated)]
 use std::num::NonZeroU32;
 
 /// The "raw-id" is used for interned keys in salsa -- it is basically

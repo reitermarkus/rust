@@ -440,9 +440,12 @@ fn tuple() {
 
 #[test]
 fn non_zero_and_non_null() {
+    use core::ptr::NonNull;
+    #[allow(deprecated)]
+    use core::num::NonZeroU8;
+
     size_and_align! {
         minicore: non_zero, non_null, option;
-        use core::{num::NonZeroU8, ptr::NonNull};
         struct Goal(Option<NonZeroU8>, Option<NonNull<i32>>);
     }
 }

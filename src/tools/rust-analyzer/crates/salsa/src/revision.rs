@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 use std::num::NonZeroU32;
 use std::sync::atomic::{AtomicU32, Ordering};
 
